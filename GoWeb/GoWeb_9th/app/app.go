@@ -87,6 +87,7 @@ func (a *AppHandler) Close() {
 	a.db.Close()
 }
 func CheckSignin(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+	fmt.Println("-----------------------1")
 	//if request URL is /signin.html, then next()
 	if strings.Contains(r.URL.Path, "/signin") || strings.Contains(r.URL.Path, "/auth") {
 		next(w, r)
