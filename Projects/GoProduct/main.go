@@ -6,7 +6,10 @@ import (
 )
 
 func main() {
-	p := common.MakeHandler("./info.db")
+	// read dbfilepath
+
+	// read dbfilepath
+	p := common.MakeHandler(common.DBfilepath)
 	defer p.Close()
 
 	http.ListenAndServe(":8080", p)

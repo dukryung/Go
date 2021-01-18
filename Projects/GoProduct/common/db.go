@@ -2,10 +2,26 @@ package common
 
 import (
 	"database/sql"
-	"fmt"
+	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type DBfilepath struct {
+	Productdbfilepath string
+	Userdbfilepath    string
+}
+
+type DB interface {
+	NewSqliteHandler() *sqliteHandler
+}
+
+type ProductDB struct {
+	filepath string
+}
+type UserDB struct {
+	filepath string
+}
 
 type Products struct {
 	ID        int    `json:"id"`
@@ -13,9 +29,22 @@ type Products struct {
 	SessionID int    `json:"sessionid"`
 }
 
+type Users struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name:`
+	SessionID int    `json:"sessionid"`
+}
+
 type DBHandler interface {
-	getProducts(string) []*Products
-	addProducts(string, string)
+	createProducts(string, string)
+	readProducts(string) []*Products
+	updateProducts(string, string)
+	deleteProducts(string, string)
+	createUsers(userinfo)
+	readUsers(int, string) []*Users
+	updateUsers(int, string)
+	deleteUsers(string, int)
+
 	Close()
 }
 
@@ -23,76 +52,78 @@ type sqliteHandler struct {
 	db *sql.DB
 }
 
-func NewDBHandler(filepath string) DBHandler {
-	return NewSqliteHandler(filepath)
+func NewDBHandler(database DB) DBHandler {
+	return database.NewSqliteHandler()
 }
 
-func NewSqliteHandler(filepath string) *sqliteHandler {
-	database, err := sql.Open("sqlite3", filepath)
+func (pdb *ProductDB) NewSqliteHandler() *sqliteHandler {
+	database, err := sql.Open("sqlite3", pdb.filepath)
 	if err != nil {
 		panic(err)
 	}
 	stmt, err := database.Prepare(`CREATE TABLE IF NOT EXISTS products (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			name TEXT,
 			sessionid STRING,
-			createdat DATETIME,
+			title TEXT,
+			desc TEXT,
+			createdat DATETIME
 			);
-			CREATE INDEX IF NOT EXISTS sessioniddIndexOnProducts ON Products (
+			CREATE INDEX IF NOT EXISTS sessionidIndexOnproducts ON products (
 				sessionid ASC
-			)
+			);
 			`)
 
 	if err != nil {
 		panic(err)
 	}
+	defer stmt.Close()
+
 	stmt.Exec()
 
 	return &sqliteHandler{db: database}
 }
-func (s *sqliteHandler) Close() {
-	s.db.Close()
-}
 
-func (s *sqliteHandler) getProducts(sessionid string) []*Products {
-	// read html file
-	productlist := []*Products{}
-	rows, err := s.db.Query("SELECT id, name, sessionid FROM products WHERE sessionid=?", sessionid)
+func (udb *UserDB) NewSqliteHandler() *sqliteHandler {
+	database, err := sql.Open("sqlite3", udb.filepath)
 	if err != nil {
 		panic(err)
 	}
 
-	defer rows.Close()
+	stmt, err := database.Prepare(`CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, 
+			sessionid STRING,
+			userid STRING,
+			password STRING,
+			email STRING,
+			);
+			CREATE INDEX IF NOT EXISTS sessionidIndexOnusers ON users (
+				sessionid ASC
+			);
+			`)
 
-	for rows.Next() {
-		var product Products
-		rows.Scan(&product.ID, &product.Name, &product.SessionID)
-		productlist = append(productlist, &product)
-	}
-	return productlist
-}
-
-func (s *sqliteHandler) addProducts(name string, sessionid string) {
-	stmt, err := s.db.Prepare("INSERT INTO products (name, sessionid, createdat)  VALUES(??, datetime('now')")
 	if err != nil {
 		panic(err)
 	}
-
 	defer stmt.Close()
 
-	result, err := stmt.Exec(name, sessionid)
+	result, err := stmt.Exec()
 	if err != nil {
 		panic(err)
 	}
 
 	rowcnt, err := result.RowsAffected()
 	if err != nil {
-		fmt.Println("[ERR] RowsAffected err : ", err)
 		panic(err)
 	}
 
-	if rowcnt != 1 {
-		fmt.Println("[LOG] anything is not affected")
+	if rowcnt == 0 {
+		log.Println("[LOG] didn't create any user info ")
 	}
 
+	return &sqliteHandler{db: database}
+
+}
+
+func (s *sqliteHandler) Close() {
+	s.db.Close()
 }
