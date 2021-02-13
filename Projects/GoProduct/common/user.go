@@ -9,7 +9,7 @@ type userinfo struct {
 	Email     string `json:"email"`
 }
 
-func (s *sqliteHandler) createUsers(userinfo userinfo) {
+func (s *sqliteHandler) createUsers(userinfo *userinfo) {
 	stmt, err := s.db.Prepare("INSERT INTO users (name, sessionid, createdat)  VALUES(?,?,datetime('now'))")
 	if err != nil {
 		panic(err)

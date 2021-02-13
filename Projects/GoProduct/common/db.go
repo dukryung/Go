@@ -2,7 +2,8 @@ package common
 
 import (
 	"database/sql"
-	"log"
+	"fmt"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -40,7 +41,7 @@ type DBHandler interface {
 	readProducts(string) []*Products
 	updateProducts(string, string)
 	deleteProducts(string, string)
-	createUsers(userinfo)
+	createUsers(*userinfo)
 	readUsers(int, string) []*Users
 	updateUsers(int, string)
 	deleteUsers(string, int)
@@ -56,7 +57,19 @@ func NewDBHandler(database DB) DBHandler {
 	return database.NewSqliteHandler()
 }
 
+func CreateDBFolder() {
+	if _, err := os.Stat("./db"); os.IsNotExist(err) {
+		err := os.MkdirAll("./db", 0777)
+		if err != nil {
+			fmt.Println("[LOG] Create folder Error :", err)
+			return
+		}
+	}
+}
+
 func (pdb *ProductDB) NewSqliteHandler() *sqliteHandler {
+	CreateDBFolder()
+
 	database, err := sql.Open("sqlite3", pdb.filepath)
 	if err != nil {
 		panic(err)
@@ -94,7 +107,7 @@ func (udb *UserDB) NewSqliteHandler() *sqliteHandler {
 			sessionid STRING,
 			userid STRING,
 			password STRING,
-			email STRING,
+			email STRING
 			);
 			CREATE INDEX IF NOT EXISTS sessionidIndexOnusers ON users (
 				sessionid ASC
@@ -106,22 +119,8 @@ func (udb *UserDB) NewSqliteHandler() *sqliteHandler {
 	}
 	defer stmt.Close()
 
-	result, err := stmt.Exec()
-	if err != nil {
-		panic(err)
-	}
-
-	rowcnt, err := result.RowsAffected()
-	if err != nil {
-		panic(err)
-	}
-
-	if rowcnt == 0 {
-		log.Println("[LOG] didn't create any user info ")
-	}
-
+	stmt.Exec()
 	return &sqliteHandler{db: database}
-
 }
 
 func (s *sqliteHandler) Close() {

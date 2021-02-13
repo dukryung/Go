@@ -2,9 +2,11 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/unrolled/render"
 
@@ -70,8 +72,11 @@ func (u *userHandler) createUserHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		panic(err)
 	}
-
-	u.db.createUsers()
+	userinfo.Sessionid, err = strconv.Atoi(sessionid)
+	if err != nil {
+		panic(err)
+	}
+	u.db.createUsers(userinfo)
 
 }
 
@@ -148,6 +153,8 @@ func MakeHandler(dbfilepath DBfilepath) *programHandler {
 
 	n := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), negroni.NewStatic(http.Dir("public")))
 	n.UseHandler(r)
+	fmt.Println("dbfilepath pdb:", dbfilepath.Productdbfilepath)
+	fmt.Println("dbfilepath udb:", dbfilepath.Userdbfilepath)
 
 	pdb := &ProductDB{filepath: dbfilepath.Productdbfilepath}
 	udb := &UserDB{filepath: dbfilepath.Userdbfilepath}
