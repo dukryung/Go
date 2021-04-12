@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -18,8 +17,8 @@ import (
 
 var googleOauthConfig = oauth2.Config{
 	RedirectURL:  "http://localhost:8080/auth/google/callback",
-	ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-	ClientSecret: os.Getenv("GOOGLE_SECRET_KEY"),
+	ClientID:     "10397292751-jqmb2g27a9pks1qba5m4h576qacss16b.apps.googleusercontent.com",
+	ClientSecret: "m65Xt4QPuloEz3bgIBfF2GbG",
 	Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
 	Endpoint:     google.Endpoint,
 }
@@ -50,7 +49,7 @@ func generateStateOauthCookie(w http.ResponseWriter) string {
 
 func googleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	oauthstate, _ := r.Cookie("oauthstate")
-
+	log.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@oauthstate :", oauthstate)
 	if r.FormValue("state") != oauthstate.Value {
 		errMsg := fmt.Sprintf("invalid google oauth cookie : %s , state : %s\n", oauthstate.Value, r.FormValue("state"))
 		log.Printf(errMsg)
