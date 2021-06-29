@@ -1,16 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"log"
-	"mime/multipart"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"google.golang.org/api/option"
-
-	firebase "firebase.google.com/go/v4"
+	"github.com/gin-gonic/gin"
 )
 
 //func main() {
@@ -212,6 +211,7 @@ func multipart() {
 /*
 var rd *render.Render = render.New()
 */
+/*
 func main() {
 
 	fd, err := os.Open("./test_1.txt")
@@ -259,14 +259,14 @@ func main() {
 		log.Fatal("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@:", err)
 	}
 	wc.Close()
-
-	/*
-		err := http.ListenAndServe(":8080", MakeHandler())
-		if err != nil {
-			log.Fatal("listenandserve err : ", err)
-		}
-	*/
-}
+*/
+/*
+	err := http.ListenAndServe(":8080", MakeHandler())
+	if err != nil {
+		log.Fatal("listenandserve err : ", err)
+	}
+*/
+//}
 
 // func test(r *http.Request) {
 // 	_, fileheader, _ := r.FormFile("asdf")
@@ -316,3 +316,85 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 */
+
+func main() {
+	log.Println("[LOG] starting server...")
+
+	router := MakeHandler()
+
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: router,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err == http.ErrServerClosed {
+			log.Fatalf("[ERR] Failed to initialize server: %v\n", err)
+		}
+	}()
+
+	log.Printf("[LOG]Listening on port %v\n", server.Addr)
+
+	quit := make(chan os.Signal)
+
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	<-quit
+
+	ctx, err := context.WithTimeout(context.Background(), 5*time.Second)
+	if err != nil {
+		log.Fatalf("[ERR] context err : %v\n", err)
+	}
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("[ERR] server forced to shutdown : %v\n", err)
+	}
+
+}
+
+func MakeHandler() *gin.Engine {
+	router := gin.Default()
+
+	router.Static("/", "./")
+	//router.MaxMultipartMemory = 8 << 20
+	router.GET("/", getinfo)
+
+	return router
+}
+
+func getinfo(c *gin.Context) {
+	c.Header("Content-Type", "text/html")
+	c.HTML(
+		http.StatusOK,
+		"index.html",
+		gin.H{},
+	)
+
+	/*
+		var userinfo info
+		data, err := ioutil.ReadAll(c.Request.Body)
+		if err != nil {
+			log.Println("[ERR] read all err : ", err)
+		}
+		err = json.Unmarshal(data, &userinfo)
+		if err != nil {
+			log.Println("[ERR] unmarshal err :", err)
+		}
+
+		log.Println("user info name :", userinfo.Name)
+		log.Println("user info age :", userinfo.Age)
+	*/
+
+	form, _ := c.MultipartForm()
+	files := form.File["imagefiles"]
+
+	for _, file := range files {
+		log.Println("file name :", file.Filename)
+
+	}
+}
+
+type info struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}

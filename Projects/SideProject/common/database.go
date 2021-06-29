@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -12,7 +13,28 @@ type DBHandler interface {
 	ReadProjectList(*ReqProjectsOfTheDay) *ResProjectsOfTheDay
 	ReadArtistList() *ResArtistOfTheMonth
 	ReadUserInfo(string) *ResUserInfo
+	ReadUserID(string) (*int, error)
 	CreateUserInfo(AuthUserInfo) error
+
+	UpdateUserInfo(string, *ReqJoinInfo) error
+	UpdateModificationUserInfo(string, *ReqJoinInfo) error
+
+	ReadProfileFrameInfo(string) (*ResProfileFrameInfo, error)
+	ReadProfileProjectInfo(string) (*ResProfileProjectInfo, error)
+	ReadProfileSellInfo(string) (*ResProfileSellInfo, error)
+	ReadProfileBuyInfo(string) (*ResProfileBuyInfo, error)
+	ReadProfileWithdrawInfo(string) (*ResProfileWithdrawInfo, error)
+	ReadModificationUserInfo(string) (*ResModificationUserInfo, error)
+	ReadProfileArtistInfo(*gin.Context) (*ResArtistInfo, error)
+
+	ReadPersonalInformation(string) (*ResPersonalInformation, error)
+	UpdatePersonalInformation(*gin.Context, string) error
+
+	ReadProjectDetailArtistProjectInfo(*gin.Context) (*ResProjectDetailInfo, error)
+	ReadProjectDetailArtistProjectImagesInfo(*gin.Context) (*ResProjectDetailInfo, error)
+	ReadProjectDetailCommentInfo(*gin.Context) (*ResProjectDetailInfo, error)
+
+	CreateProjectInfo(*gin.Context, *int) error
 }
 
 type mariadbHandler struct {
@@ -56,11 +78,16 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 		name	     VARCHAR(50),
 		nickname     VARCHAR(50),
 		email 	     VARCHAR(200),
+		agree_email_marketing BOOLEAN,
 		image_link   TEXT,
 		introduction VARCHAR(200),
+		social       TEXT,
+		cash  		 INT,
+  		bank  		 INT,
+  		account	     TEXT,
+		agree_policy BOOLEAN,
 		created_at   TIMESTAMP,
 		updated_at   TIMESTAMP,
-		social       TEXT,
 		UNIQUE INDEX idx_id (id),
 		UNIQUE INDEX idx_session_id (session_id)
 		);
@@ -79,14 +106,17 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS project (
 		id BIGINT 		   UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		user_id 	 	   BIGINT UNSIGNED,
-  		category_id    BIGINT UNSIGNED,
+  		category_id    	   BIGINT UNSIGNED,
   		title 			   VARCHAR(200),
   		description 	   TEXT,
   		price 			   INT,
   		sell_count 		   INT,
   		total_upvote_count INT,
   		comment_count 	   INT,
+		video_link		   TEXT,
   		beta 			   BOOLEAN,
+		beta_link		   TEXT,
+		origin_link 	   TEXT,
   		created_at 		   TIMESTAMP,
   		updated_at 		   TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
@@ -123,25 +153,6 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 		log.Println("[LOG] stmt exec error : ", err)
 	}
 
-	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS video (
-  		id 			BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  		project_id  BIGINT UNSIGNED,
-  		link 		TEXT,
-  		created_at  TIMESTAMP,
-  		updated_at  TIMESTAMP,
-  		UNIQUE INDEX idx_id (id),
-  		INDEX idx_project_id (project_id)
-  		);
-  		`)
-
-	if err != nil {
-		log.Println("[LOG] database prepare err:", err)
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		log.Println("[LOG] stmt exec error : ", err)
-	}
-
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS beta_download_user (
   		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		user_id BIGINT UNSIGNED,
@@ -162,9 +173,11 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS buy_history (
   		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  		user_id BIGINT UNSIGNED,
-  		project_id BIGINT UNSIGNED,
-  		seller_id BIGINT UNSIGNED,
+  		user_id 		BIGINT UNSIGNED,
+  		project_id  	BIGINT UNSIGNED,
+  		seller_id 		BIGINT UNSIGNED,
+		seller_nickname VARCHAR(50),
+		price			INT,
   		import_id int,
   		created_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
@@ -181,12 +194,14 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 	}
 
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS sell_history (
-  		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  		user_id BIGINT UNSIGNED,
-  		project_id BIGINT UNSIGNED,
-  		buyer_id BIGINT UNSIGNED,
-  		import_id int,
-  		created_at TIMESTAMP,
+  		id 				BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  		user_id 		BIGINT UNSIGNED,
+  		project_id 		BIGINT UNSIGNED,
+  		buyer_id 		BIGINT UNSIGNED,
+		buyer_nickname  VARCHAR(50),
+		price			INT,
+  		import_id 		INT,
+  		created_at 		TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
   		INDEX idx_user_id (user_id)
   		);
@@ -204,29 +219,9 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
   		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		user_id BIGINT UNSIGNED,
   		amount  INT,
+		requested_at TIMESTAMP,
+		completed_at TIMESTAMP,
   		created_at TIMESTAMP,
-  		UNIQUE INDEX idx_id (id),
-  		INDEX idx_user_id (user_id)
-  		);
-  		`)
-
-	if err != nil {
-		log.Println("[LOG] database prepare err:", err)
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		log.Println("[LOG] stmt exec error : ", err)
-	}
-
-	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS account (
-  		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  		user_id BIGINT UNSIGNED,
-  		project_id BIGINT UNSIGNED,
-  		cash  INT,
-  		bank  INT,
-  		account TEXT,
-  		created_at TIMESTAMP,
-  		updated_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
   		INDEX idx_user_id (user_id)
   		);
@@ -261,8 +256,9 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS comment (
   		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  		user_id BIGINT UNSIGNED,
+		artist_id BIGINT  UNSIGNED,
   		project_id BIGINT UNSIGNED,
+  		artist_nickname   VARCHAR(50),
   		text TEXT,
   		created_at TIMESTAMP,
   		updated_at TIMESTAMP,
@@ -281,8 +277,9 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS reply (
   		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  		user_id BIGINT UNSIGNED,
+  		artist_id BIGINT UNSIGNED,
   		comment_id BIGINT UNSIGNED,
+		artist_nickname VARCHAR(50),
   		text TEXT,
   		created_at TIMESTAMP,
   		updated_at TIMESTAMP,
@@ -319,6 +316,7 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
   		id BIGINT  UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		project_id BIGINT UNSIGNED,
   		score  	   FLOAT,
+		rank	   int,
   		created_at TIMESTAMP,
   		updated_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
@@ -338,7 +336,9 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS user_rank (
   		id BIGINT  UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		user_id BIGINT UNSIGNED,
-  		score  	   FLOAT,
+  		day_score  	   FLOAT,
+		week_score 	   FLOAT, 
+		month_score    FLOAT,
   		created_at TIMESTAMP,
   		updated_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
@@ -346,6 +346,25 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 		INDEX idx_created_at (created_at)
   		);
   		`)
+
+	if err != nil {
+		log.Println("[LOG] database prepare err:", err)
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Println("[LOG] stmt exec error : ", err)
+	}
+
+	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS upvote_status (
+		id BIGINT  UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+		user_id BIGINT UNSIGNED,
+		project_id BIGINT UNSIGNED,
+		created_at TIMESTAMP,
+		UNIQUE INDEX idx_id (id),
+		INDEX idx_user_id (user_id),
+	 	INDEX idx_created_at (created_at)
+		);
+		`)
 
 	if err != nil {
 		log.Println("[LOG] database prepare err:", err)
@@ -389,7 +408,7 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 				  LIMIT 10;`)
 
 	if err != nil {
-		log.Println("[LOG] stmt err : ", err)
+		log.Println("[ERR] stmt err : ", err)
 		return nil
 	}
 	defer stmt.Close()
@@ -453,14 +472,14 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 		stmt, err = m.db.Prepare(`SELECT link FROM image WHERE id = ? LIMIT 1;`)
 		rows, err = stmt.Query(respod.Project[i].ID)
 		if err != nil {
-			log.Println("[LOG] stmt query err : ", err)
+			log.Println("[ERR] stmt query err : ", err)
 			return nil
 		}
 
 		for rows.Next() {
 			err := rows.Scan(&link)
 			if err != nil {
-				log.Println("[LOG] rows scan err : ", err)
+				log.Println("[ERR] rows scan err : ", err)
 				return nil
 			}
 			respod.Project[i].ImageLink = link
@@ -532,101 +551,9 @@ func (m *mariadbHandler) ReadArtistList() *ResArtistOfTheMonth {
 	var artist ArtistList
 
 	for rows.Next() {
-		//rows.Scan(&artist.NickName, &artist.Introduction, &artist.ImageLink)
 		rows.Scan(&artist.NickName, &artist.Introduction, &artist.ImageLink, &artist.Rank)
 		resaom.Artist = append(resaom.Artist, artist)
 	}
 
 	return resaom
-}
-
-func (m *mariadbHandler) ReadUserInfo(sessionid string) *ResUserInfo {
-	var resuser *ResUserInfo
-
-	resuser = &ResUserInfo{}
-
-	stmt, err := m.db.Prepare(`SELECT id, nickname
-				  FROM user WHERE session_id = ?`)
-	if err != nil {
-		log.Println("[ERR] prepare stmt err : ", err)
-		return nil
-	}
-
-	defer stmt.Close()
-
-	rows, err := stmt.Query(sessionid)
-	if err != nil {
-		log.Println("[ERR] stmt query err : ", err)
-		return nil
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		err = rows.Scan(&resuser.ID, &resuser.NickName)
-		if err != nil {
-			log.Println("[ERR] stmt query err : ", err)
-			return nil
-		}
-	}
-
-	return resuser
-}
-
-func (m *mariadbHandler) CreateUserInfo(authuserinfo AuthUserInfo) error {
-	tx, err := m.db.Begin()
-	if err != nil {
-		log.Println("[ERR] transaction begin err : ", err)
-		return err
-	}
-
-	defer tx.Rollback()
-
-	stmt, err := tx.Prepare(`INSERT IGNORE INTO user (session_id,email,social) VALUES(?,?,?)`)
-	if err != nil {
-		log.Println("[ERR]  prepared statement err : ", err)
-		return err
-	}
-	defer stmt.Close()
-
-	result, err := stmt.Exec(authuserinfo.ID, authuserinfo.Email, authuserinfo.Social)
-	if err != nil {
-		log.Println("[ERR] exec statement err : ", err)
-		return err
-	}
-
-	rowcnt, err := result.RowsAffected()
-	if err != nil {
-		log.Println("[ERR] rows affected err : ", err)
-		return err
-	}
-	if rowcnt == 0 {
-		log.Println("[LOG] None affected rows")
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		log.Println("[ERR] transacntion commit err : ", err)
-		return err
-	}
-
-	return nil
-}
-
-func (m *mariadbHandler) UpdateUserInfo(sessionid string, reqjoininfo ReqJoinInfo) error {
-
-	tx, err := m.db.Begin()
-	if err != nil {
-		log.Println("[ERR] begin err : ", err)
-		return err
-	}
-
-	stmt, err := tx.Prepare(`UPDATE user SET name=?, nickname=?,image_link=?,introduction=?,social=?,updated_at=NOW()
-	WHERE session_id=?`)
-
-	defer stmt.Close()
-
-	stmt.Exec(reqjoininfo.UserInfo.Name, reqjoininfo.UserInfo.Nickname)
-
-	return nil
 }

@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/unrolled/render"
+	"github.com/gin-gonic/gin"
 
-	"github.com/gorilla/mux"
+	"github.com/unrolled/render"
 )
 
 var rd *render.Render = render.New()
@@ -92,109 +92,398 @@ type User struct {
 	ID                  string `json:"id"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
-	Email               string `json:"agree_email_marketing"`
+	Email               string `json:"email"`
 	Introduction        string `json:"introduction"`
 	AgreeEmailMarketing bool   `json:"agree_email_marketing"`
 }
 
 type Account struct {
 	UserID      string `json:"user_id"`
-	Bank        string `json:"bank"`
+	Bank        int    `json:"bank"`
 	Account     string `json:"account"`
 	AgreePolicy bool   `json:"agree_policy"`
 }
 
-func (p *project) GetProjectInfoHandler(w http.ResponseWriter, r *http.Request) {
+func (p *project) GetProjectInfoHandler(c *gin.Context) {
 	var reqpod ReqProjectsOfTheDay
 
-	err := r.ParseForm()
+	data, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		log.Println("[LOG] parseform err : ", err)
-		rd.JSON(w, http.StatusInternalServerError, nil)
+		log.Println("[ERR] readAll err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
 	}
 
-	dmddate := r.Form.Get("demand_date")
-	dmdperiod := r.Form.Get("demand_period")
-
-	reqpod.DemandDate = dmddate
-	reqpod.DemandPeriod = dmdperiod
+	err = json.Unmarshal(data, &reqpod)
+	if err != nil {
+		log.Println("[ERR] json unmarshal err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+	}
 
 	log.Println("[LOG] reqpod information : ", reqpod)
 
 	respod := p.db.ReadProjectList(&reqpod)
 	if respod == nil {
-		rd.JSON(w, http.StatusInternalServerError, nil)
+		log.Println("[LOG] empty project list")
+		c.JSON(http.StatusInternalServerError, nil)
 	}
 
-	rd.JSON(w, http.StatusOK, respod)
+	c.JSON(http.StatusOK, respod)
 
 }
 
-func (p *project) GetArtistInfoHandler(w http.ResponseWriter, r *http.Request) {
+func (p *project) GetArtistInfoHandler(c *gin.Context) {
 	resaom := p.db.ReadArtistList()
-	log.Println("[LOG] resaom : ", resaom)
-
-	rd.JSON(w, http.StatusOK, resaom)
+	if resaom == nil {
+		log.Println("[LOG] resaom : ", resaom)
+		log.Println("[LOG] empty artist list")
+	}
+	c.JSON(http.StatusOK, resaom)
 }
 
-func (p *project) GetUserInfoHandler(w http.ResponseWriter, r *http.Request) {
+func (p *project) GetUserInfoHandler(c *gin.Context) {
 
-	sessionid := getSessionID(r)
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
 
 	resuser := p.db.ReadUserInfo(sessionid)
-
-	rd.JSON(w, http.StatusOK, resuser)
+	c.JSON(http.StatusOK, resuser)
 }
 
-func (p *project) GetIndexHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Context-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(htmlIndex))
+func (p *project) GetIndexHandler(c *gin.Context) {
+
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"title": "Main Page",
+	})
 }
 
-func (p *project) PutUserInfoHandler(w http.ResponseWriter, r *http.Request) {
-	sessionid := getSessionID(r)
+func (p *project) PutUserInfoHandler(c *gin.Context) {
 
-	if sessionid == "" {
-		rd.JSON(w, http.StatusUnauthorized, nil)
-	}
+	var img Image
 
-	data, err := ioutil.ReadAll(r.Body)
+	filefullpath, reqjoininfo, err := img.SaveImageFiles(c)
 	if err != nil {
-		rd.JSON(w, http.StatusInternalServerError, nil)
+		log.Println("[ERR] get image file err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	log.Println("[LOG] img link array : ", filefullpath)
+
+	err = p.db.UpdateUserInfo(filefullpath, reqjoininfo)
+	if err != nil {
+		log.Println("[ERR] update user info err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
 	}
 
-	var reqjoininfo ReqJoinInfo
-	err = json.Unmarshal(data, &reqjoininfo)
+	c.JSON(http.StatusOK, gin.H{
+		"filedirinfo": filefullpath,
+	})
+}
+
+func (p *project) GetProfileHandler(c *gin.Context) {
+	c.HTML(http.StatusOK, "profileuser.html", gin.H{
+		"title": "Profile User Page",
+	})
+}
+func (p *project) GetProfileFramInfoHandler(c *gin.Context) {
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	resprofileframeinfo, err := p.db.ReadProfileFrameInfo(sessionid)
 	if err != nil {
-		rd.JSON(w, http.StatusInternalServerError, nil)
+		log.Println("[ERR] failed to read profile frame information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
 	}
+
+	c.JSON(http.StatusOK, resprofileframeinfo)
+}
+func (p *project) GetProfileProjectHandler(c *gin.Context) {
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	resprofileprojectinfo, err := p.db.ReadProfileProjectInfo(sessionid)
+	if err != nil {
+		log.Println("[ERR] failed to read profile project information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofileprojectinfo)
+}
+
+func (p *project) GetProfileSellHandler(c *gin.Context) {
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	resprofilesellinfo, err := p.db.ReadProfileSellInfo(sessionid)
+	if err != nil {
+		log.Println("[ERR] failed to read profile sell history information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofilesellinfo)
+}
+
+func (p *project) GetProfileBuyHandler(c *gin.Context) {
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	resprofilebuyinfo, err := p.db.ReadProfileBuyInfo(sessionid)
+	if err != nil {
+		log.Println("[ERR] failed to read profile buy history information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofilebuyinfo)
+}
+
+func (p *project) GetProfileWithdrawHandler(c *gin.Context) {
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	resprofilebuyinfo, err := p.db.ReadProfileWithdrawInfo(sessionid)
+	if err != nil {
+		log.Println("[ERR] failed to read profile withdraw history information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofilebuyinfo)
+}
+
+//GetModificationUserInfoHandler is function to get user profile infomation.
+func (p *project) GetModificationUserInfoHandler(c *gin.Context) {
+
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	resmodificationuserinfo, err := p.db.ReadModificationUserInfo(sessionid)
+	if err != nil {
+		log.Println("[ERR] failed to read modification user info err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, resmodificationuserinfo)
+}
+
+//PutProfileEditHandler is fuction to edit user profile information.
+func (p *project) PutModificationUserInfoHandler(c *gin.Context) {
+	var reqjoininfo *ReqJoinInfo
+
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	data, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		log.Println("[ERR] ioutil readall err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	err = json.Unmarshal(data, reqjoininfo)
+	if err != nil {
+		log.Println("[ERR] json unmarshal err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	err = p.db.UpdateModificationUserInfo(sessionid, reqjoininfo)
+	if err != nil {
+		log.Println("[ERR] update user info ")
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, nil)
+
+}
+func (p *project) GetProfileArtistHandler(c *gin.Context) {
+	c.HTML(http.StatusOK, "profileartist.html", gin.H{
+		"title": "profile artist  Page",
+	})
+}
+
+func (p *project) GetProfileArtistInfoHandler(c *gin.Context) {
+	resartistinfo, err := p.db.ReadProfileArtistInfo(c)
+	if err != nil {
+		log.Println("[ERR] failed to read artist information err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resartistinfo)
+}
+
+func (p *project) GetPersonalIndexHandler(c *gin.Context) {
+	c.HTML(http.StatusOK, "personalinformation.html", gin.H{
+		"title": "Personal Information Page",
+	})
+}
+func (p *project) GetPersonalInformationHandler(c *gin.Context) {
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	respersonalinfomation, err := p.db.ReadPersonalInformation(sessionid)
+	if err != nil {
+		log.Println("[ERR] failed to read personal information err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, respersonalinfomation)
+}
+
+func (p *project) PutPersonalInformationHandler(c *gin.Context) {
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	err := p.db.UpdatePersonalInformation(c, sessionid)
+	if err != nil {
+		log.Println("[ERR] failed to update personal information err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
+}
+
+func (p *project) GetProjectDetailProjectInformationHandler(c *gin.Context) {
+
+	resprojectdetail, err := p.db.ReadProjectDetailArtistProjectInfo(c)
+	if err != nil {
+		log.Println("[ERR] failed to read project detail information err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprojectdetail)
 
 }
 
-func MakeHandler(databasename string) http.Handler {
-	mux := mux.NewRouter()
+func (p *project) GetProjectDetailProjectImagesHandler(c *gin.Context) {
 
+	resprojectdetailimagesinfo, err := p.db.ReadProjectDetailArtistProjectImagesInfo(c)
+	if err != nil {
+		log.Println("[ERR] failed to read project detail image links err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprojectdetailimagesinfo)
+}
+
+func (p *project) GetProjectDetailCommentHandler(c *gin.Context) {
+	resprojectdetailimagesinfo, err := p.db.ReadProjectDetailCommentInfo(c)
+	if err != nil {
+		log.Println("[ERR] failed to read project detail image links err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, resprojectdetailimagesinfo)
+}
+
+func (p *project) PostProjectUploadHandler(c *gin.Context) {
+	session, _ := store.Get(c.Request, "session")
+	val := session.Values["id"]
+	sessionid := val.(string)
+
+	userid, err := p.db.ReadUserID(sessionid)
+	if err != nil {
+		log.Println("[ERR] failed to read userid err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	err = p.db.CreateProjectInfo(c, userid)
+	if err != nil {
+		log.Println("[ERR] failed to upload project err : ", err)
+		c.JSON(http.StatusOK, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
+
+}
+
+func (p *project) PutProjectUploadHandler(c *gin.Context) {
+
+}
+
+//MakeHandler is function to gather router.
+func MakeHandler(databasename string) *gin.Engine {
+
+	router := gin.Default()
+	router.LoadHTMLGlob("../public/*")
 	pdb := &ProjectDB{}
-
 	p := &project{db: MakeDBHandler(databasename, pdb)}
 
-	mux.HandleFunc("/", p.GetIndexHandler).Methods("GET")
-	mux.HandleFunc("/project", p.GetProjectInfoHandler).Methods("GET")
-	mux.HandleFunc("/artist", p.GetArtistInfoHandler).Methods("GET")
-	mux.HandleFunc("/user", p.GetUserInfoHandler).Methods("GET")
+	router.GET("/", p.GetIndexHandler)
 
-	mux.HandleFunc("/auth/google/signup", p.googleLoginHandler)
-	mux.HandleFunc("/auth/google/callback", p.googleAuthCallback)
-	mux.HandleFunc("/auth/facebook/signup", p.facebookLoginHandler)
-	mux.HandleFunc("/auth/facebook/callback", p.facebookAuthCallback)
-	mux.HandleFunc("/auth/kakao/signup", p.kakaoLoginHandler)
-	mux.HandleFunc("/auth/kakao/callback", p.kakaoAuthCallback)
-	mux.HandleFunc("/auth/naver/signup", p.naverLoginHndler)
-	mux.HandleFunc("/auth/naver/callback", p.naverAuthCallback)
+	project := router.Group("/project")
+	{
+		project.GET("/information", p.GetProjectInfoHandler)
+		project.GET("/information/detail/project", p.GetProjectDetailProjectInformationHandler)
+		project.GET("/informaiton/detail/image", p.GetProjectDetailProjectImagesHandler)
+		project.GET("/informaiton/detail/comment", p.GetProjectDetailCommentHandler)
+		project.POST("/information/upload")
+		project.PUT("/information/upload")
+	}
 
-	mux.HandleFunc("/user", p.PutUserInfoHandler).Methods("PUT")
+	router.GET("/artist", p.GetArtistInfoHandler)
 
-	return mux
+	router.GET("/user", CheckSessionValidity, p.GetUserInfoHandler)
+	router.PUT("/user", CheckSessionValidity, p.PutUserInfoHandler)
+
+	authorization := router.Group("/auth")
+	{
+		authorization.GET("/google/signup", p.googleLoginHandler)
+		authorization.GET("/google/callback", p.googleAuthCallback)
+		authorization.GET("/facebook/signup", p.facebookLoginHandler)
+		authorization.GET("/facebook/callback", p.facebookAuthCallback)
+		authorization.GET("/kakao/signup", p.kakaoLoginHandler)
+		authorization.GET("/kakao/callback", p.kakaoAuthCallback)
+		authorization.GET("/naver/signup", p.naverLoginHndler)
+		authorization.GET("/naver/callback", p.naverAuthCallback)
+	}
+
+	profileuser := router.Group("/profileuser")
+	{
+		profileuser.GET("/index", CheckSessionValidity, p.GetProfileHandler)
+		profileuser.GET("/frame", CheckSessionValidity, p.GetProfileFramInfoHandler)
+		profileuser.GET("/project", CheckSessionValidity, p.GetProfileProjectHandler)
+		profileuser.GET("/sell", CheckSessionValidity, p.GetProfileSellHandler)
+		profileuser.GET("/buy", CheckSessionValidity, p.GetProfileBuyHandler)
+		profileuser.GET("/withdraw", CheckSessionValidity, p.GetProfileWithdrawHandler)
+		profileuser.GET("/modification", CheckSessionValidity, p.GetModificationUserInfoHandler)
+		profileuser.PUT("/modification", CheckSessionValidity, p.PutModificationUserInfoHandler)
+
+	}
+
+	profileartist := router.Group("/profileartist")
+	{
+		profileartist.GET("/index", CheckSessionValidity, p.GetProfileArtistHandler)
+		profileartist.GET("/information", CheckSessionValidity, p.GetProfileArtistInfoHandler)
+	}
+
+	personal := router.Group("/personal")
+	{
+		personal.GET("/index", p.GetPersonalIndexHandler)
+		personal.GET("/information", p.GetPersonalInformationHandler)
+		personal.PUT("/information", p.PutPersonalInformationHandler)
+	}
+
+	return router
 
 }
