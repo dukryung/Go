@@ -5,6 +5,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/go-playground/validator/v10"
 
 	"github.com/gin-gonic/gin"
 
@@ -29,15 +32,15 @@ type project struct {
 	db DBHandler
 }
 
-//ReqProjectsOfTheDay is structure to contain request information.
+//ReqProjectsOfTheDay is structure to contain request informationå.
 type ReqProjectsOfTheDay struct {
-	DemandDate   string `json:"demand_date"`
-	DemandPeriod string `json:"demand_period"`
+	DemandDate   time.Time `json:"demand_date" time_format:"2001-01-01" binding:"required"`
+	DemandPeriod string    `json:"demand_period"`
 }
 
 //ResProjectsOfTheDay is structure to contain response information.
 type ResProjectsOfTheDay struct {
-	Date           string        `json:"date"`
+	Date           time.Time     `json:"date"`
 	Project        []ProjectList `json:"project"`
 	Total          string        `json:"total"`
 	Period         string        `json:"period"`
@@ -46,19 +49,19 @@ type ResProjectsOfTheDay struct {
 
 //ProjectList is structure to get project list information.
 type ProjectList struct {
-	ID           string `json:"id"`
-	Title        string `json:"title"`
-	CategoryCode string `json:"category_code"`
-	Description  string `json:"desc"`
-	ImageLink    string `json:"image_link"`
-	CreatedAt    string `json:"created_at"`
-	SellCount    string `json:"sell_cnt"`
-	UserNickName string `json:"user_nickname"`
-	CommentCount string `json:"comment_count"`
-	UpvoteCount  string `json:"upvote_count"`
-	Price        string `json:"price"`
-	Beta         string `json:"beta"`
-	Rank         string `json:"rank"`
+	ID            string `json:"id"`
+	Title         string `json:"title"`
+	CategoryCode  string `json:"category_id"`
+	Description   string `json:"desc"`
+	ImageLink     string `json:"image_link"`
+	CreatedAt     string `json:"created_at"`
+	SellCount     string `json:"sell_cnt"`
+	AristNickName string `json:"artist_nickname"`
+	CommentCount  string `json:"comment_count"`
+	UpvoteCount   string `json:"upvote_count"`
+	Price         string `json:"price"`
+	Beta          string `json:"beta"`
+	Rank          string `json:"rank"`
 }
 
 //ResArtistOfTheMonth is sturcture to contain response artist information.
@@ -107,16 +110,28 @@ type Account struct {
 func (p *project) GetProjectInfoHandler(c *gin.Context) {
 	var reqpod ReqProjectsOfTheDay
 
+	if err := c.ShouldBindJSON(&reqpod); err == nil {
+		validate := validator.New()
+		if err := validate.Struct(&reqpod); err != nil {
+			log.Println("[ERR] invalid information err : ", err)
+			c.JSON(http.StatusBadRequest, nil)
+			return
+		}
+	}
+
+	log.Println("!!!!!!!!!!!!", reqpod)
 	data, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		log.Println("[ERR] readAll err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
+		return
 	}
 
 	err = json.Unmarshal(data, &reqpod)
 	if err != nil {
 		log.Println("[ERR] json unmarshal err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
+		return
 	}
 
 	log.Println("[LOG] reqpod information : ", reqpod)
@@ -125,6 +140,7 @@ func (p *project) GetProjectInfoHandler(c *gin.Context) {
 	if respod == nil {
 		log.Println("[LOG] empty project list")
 		c.JSON(http.StatusInternalServerError, nil)
+		return
 	}
 
 	c.JSON(http.StatusOK, respod)

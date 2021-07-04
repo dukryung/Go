@@ -3,15 +3,10 @@ package common
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"net/textproto"
-	"os"
 	"testing"
 	"time"
 
@@ -34,7 +29,7 @@ func TestGetProjectInfoHandler(t *testing.T) {
 	assert := assert.New(t)
 	ts := httptest.NewServer(MakeHandler("sideproject"))
 
-	reqpod.DemandDate = "2021-03-22"
+	reqpod.DemandDate = time.Now()
 	reqpod.DemandPeriod = "1"
 
 	data, err := json.Marshal(reqpod)
@@ -44,7 +39,7 @@ func TestGetProjectInfoHandler(t *testing.T) {
 	buff := bytes.NewBuffer(data)
 	client := &http.Client{}
 
-	req, err := http.NewRequest("GET", ts.URL+"/project", buff)
+	req, err := http.NewRequest("GET", ts.URL+"/project/information", buff)
 
 	res, err := client.Do(req)
 	if err != nil {
@@ -59,6 +54,8 @@ func TestGetProjectInfoHandler(t *testing.T) {
 	assert.Equal(http.StatusOK, res.StatusCode)
 
 }
+
+/*
 func TestGetArtistInfoHandler(t *testing.T) {
 	assert := assert.New(t)
 	ts := httptest.NewServer(MakeHandler("sideproject"))
@@ -136,3 +133,4 @@ func TestPutUserInfoHandler(t *testing.T) {
 
 }
 
+*/

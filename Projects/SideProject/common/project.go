@@ -67,6 +67,7 @@ type ReqUploadProjectInfo struct {
 }
 
 func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(c *gin.Context) (*ResProjectDetailInfo, error) {
+
 	var reqprojectdetailinfo *ReqProjectDetailInfo
 	var resprojectdetailinfo *ResProjectDetailInfo
 
@@ -81,6 +82,7 @@ func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(c *gin.Context) (*Re
 		log.Println("[ERR] json unmarshal err : ", err)
 		return nil, err
 	}
+
 	// -------{TODO : delete rank column and test query  in database's table.}
 	stmt, err := m.db.Prepare(`SELECT 
 				  u.id,
@@ -101,7 +103,7 @@ func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(c *gin.Context) (*Re
 				  WHERE u.id = ? AND p.id = ?`)
 
 	if err != nil {
-		log.Println("[ERR] prepare statemnet err : ", err)
+		log.Println("[ERR] prepare statement err : ", err)
 		return nil, err
 	}
 

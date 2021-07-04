@@ -77,7 +77,7 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 		session_id   TEXT,
 		name	     VARCHAR(50),
 		nickname     VARCHAR(50),
-		email 	     VARCHAR(200),
+		email 	     VARCHAR(320),
 		agree_email_marketing BOOLEAN,
 		image_link   TEXT,
 		introduction VARCHAR(200),
@@ -120,8 +120,7 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
   		created_at 		   TIMESTAMP,
   		updated_at 		   TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
-		INDEX idx_user_id (user_id),
-		INDEX idx_created_id (created_id)
+		INDEX idx_created_at (created_at)
   		);
   		`)
 
@@ -180,8 +179,7 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 		price			INT,
   		import_id int,
   		created_at TIMESTAMP,
-  		UNIQUE INDEX idx_id (id),
-  		INDEX idx_user_id (user_id)
+  		UNIQUE INDEX idx_id (id)
   		);
   		`)
 
@@ -263,7 +261,7 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
   		created_at TIMESTAMP,
   		updated_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
-  		INDEX idx_user_id (user_id)
+  		INDEX idx_artist_id (artist_id)
   		);
   		`)
 
@@ -284,7 +282,7 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
   		created_at TIMESTAMP,
   		updated_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
-  		INDEX idx_user_id (user_id)
+  		INDEX idx_comment_id (comment_id)
   		);
   		`)
 
@@ -391,7 +389,7 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 	stmt, err := m.db.Prepare(`SELECT 
 						p.id, 
 						p.title, 
-						c.code,
+						p.category_id,
 				 		p.description,
 						DATE_FORMAT(p.created_at,"%Y-%m-%d"),
 						p.sell_count, 
@@ -403,7 +401,6 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 						RANK() OVER(ORDER BY p_r.score DESC)   
 				  FROM project AS p INNER JOIN project_rank AS p_r ON p.id = p_r.project_id 
 				  					INNER JOIN user AS u ON p.user_id = u.id
-									INNER JOIN category AS c ON p.category_id = c.id
 				  WHERE p_r.created_at BETWEEN DATE_FORMAT(DATE_SUB( ? ,INTERVAL ? DAY),"%Y-%m-%d") AND DATE_FORMAT(DATE_ADD( ? ,INTERVAL ? DAY), "%Y-%m-%d")
 				  LIMIT 10;`)
 
@@ -440,9 +437,9 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 	respod.RankLastNumber = "0"
 
 	//var projectid, ranking uint64
-	var projectid, ranking, title, categorycode, desc, createdat, sellcount, nickname, commentcount, totalupvotecount, price, beta string
+	var projectid, ranking, title, categorycode, desc, createdat, sellcount, artistnickname, commentcount, totalupvotecount, price, beta string
 	for rows.Next() {
-		err := rows.Scan(&projectid, &title, &categorycode, &desc, &createdat, &sellcount, &nickname, &commentcount, &totalupvotecount, &price, &beta, &ranking)
+		err := rows.Scan(&projectid, &title, &categorycode, &desc, &createdat, &sellcount, &artistnickname, &commentcount, &totalupvotecount, &price, &beta, &ranking)
 		if err != nil {
 			log.Println("[LOG] scan err : ", err)
 			return nil
@@ -455,7 +452,7 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 		project.Description = desc
 		project.CreatedAt = createdat
 		project.SellCount = sellcount
-		project.UserNickName = nickname
+		project.AristNickName = artistnickname
 		project.CommentCount = commentcount
 		project.UpvoteCount = totalupvotecount
 		project.Price = price
