@@ -34,7 +34,7 @@ type project struct {
 
 //ReqProjectsOfTheDay is structure to contain request informationå.
 type ReqProjectsOfTheDay struct {
-	DemandDate   time.Time `json:"demand_date" time_format:"2001-01-01" binding:"required"`
+	DemandDate   time.Time `json:"demand_date" time_format:"2006-01-02" time_utc:"1" binding:"required"`
 	DemandPeriod string    `json:"demand_period"`
 }
 
@@ -108,15 +108,22 @@ type Account struct {
 }
 
 func (p *project) GetProjectInfoHandler(c *gin.Context) {
-	var reqpod ReqProjectsOfTheDay
+	var reqpod = &ReqProjectsOfTheDay{}
 
-	if err := c.ShouldBindJSON(&reqpod); err == nil {
+	if err := c.ShouldBind(&reqpod); err == nil {
+
+		log.Println("@@@@@@@@@@@@@@@@@@@@@@")
+		log.Println("!@#!@#!@# reqpod : ", reqpod)
 		validate := validator.New()
 		if err := validate.Struct(&reqpod); err != nil {
 			log.Println("[ERR] invalid information err : ", err)
 			c.JSON(http.StatusBadRequest, nil)
 			return
 		}
+	} else {
+		log.Println("[ERR] json err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
 	}
 
 	log.Println("!!!!!!!!!!!!", reqpod)
@@ -136,7 +143,7 @@ func (p *project) GetProjectInfoHandler(c *gin.Context) {
 
 	log.Println("[LOG] reqpod information : ", reqpod)
 
-	respod := p.db.ReadProjectList(&reqpod)
+	respod := p.db.ReadProjectList(reqpod)
 	if respod == nil {
 		log.Println("[LOG] empty project list")
 		c.JSON(http.StatusInternalServerError, nil)

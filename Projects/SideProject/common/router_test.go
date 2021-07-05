@@ -30,6 +30,9 @@ func TestGetProjectInfoHandler(t *testing.T) {
 	ts := httptest.NewServer(MakeHandler("sideproject"))
 
 	reqpod.DemandDate = time.Now()
+	//reqpod.DemandDate = time.Now().Format("2006-01-02 15:04:05")
+	//reqpod.DemandDate = "2011-123123"
+	log.Println("[1!@#!@#!@#!@#!@#!@#!@#", reqpod.DemandDate)
 	reqpod.DemandPeriod = "1"
 
 	data, err := json.Marshal(reqpod)
@@ -40,6 +43,7 @@ func TestGetProjectInfoHandler(t *testing.T) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest("GET", ts.URL+"/project/information", buff)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err := client.Do(req)
 	if err != nil {
