@@ -3,10 +3,15 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
+	"os"
 	"testing"
 	"time"
 
@@ -25,15 +30,14 @@ func TestIndexPathHandler(t *testing.T) {
 }
 
 func TestGetProjectInfoHandler(t *testing.T) {
-	var reqpod ReqProjectsOfTheDay
+	var reqpod = &ReqProjectsOfTheDay{}
 	assert := assert.New(t)
 	ts := httptest.NewServer(MakeHandler("sideproject"))
 
-	reqpod.DemandDate = time.Now()
-	//reqpod.DemandDate = time.Now().Format("2006-01-02 15:04:05")
-	//reqpod.DemandDate = "2011-123123"
-	log.Println("[1!@#!@#!@#!@#!@#!@#!@#", reqpod.DemandDate)
-	reqpod.DemandPeriod = "1"
+	now := time.Now()
+	reqpod.DemandDate = now
+
+	reqpod.DemandPeriod = 1
 
 	data, err := json.Marshal(reqpod)
 	if err != nil {
@@ -43,33 +47,33 @@ func TestGetProjectInfoHandler(t *testing.T) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest("GET", ts.URL+"/project/information", buff)
-	req.Header.Set("Content-Type", "application/json")
+
+	//req.Header.Set("Content-Type", "application/json")
 
 	res, err := client.Do(req)
 	if err != nil {
 		log.Println("[ERR] client do err : ", err)
 	}
 
-	assert.Equal(res.StatusCode, http.StatusOK)
-
 	respbytes, _ := ioutil.ReadAll(res.Body)
-	log.Println("string resp body : ", string(respbytes))
+	log.Println("project list : ", string(respbytes))
 
 	assert.Equal(http.StatusOK, res.StatusCode)
 
 }
 
-/*
 func TestGetArtistInfoHandler(t *testing.T) {
 	assert := assert.New(t)
 	ts := httptest.NewServer(MakeHandler("sideproject"))
 
-	resp, err := http.Get(ts.URL + "/artist")
+	res, err := http.Get(ts.URL + "/artist")
 	if err != nil {
 		log.Println("[ERR] http get err : ", err)
 	}
+	respbytes, _ := ioutil.ReadAll(res.Body)
+	log.Println("artist list : ", string(respbytes))
 
-	assert.Equal(http.StatusOK, resp.StatusCode)
+	assert.Equal(http.StatusOK, res.StatusCode)
 }
 
 func TestPutUserInfoHandler(t *testing.T) {
@@ -136,5 +140,3 @@ func TestPutUserInfoHandler(t *testing.T) {
 	assert.Equal(http.StatusOK, res.StatusCode)
 
 }
-
-*/
