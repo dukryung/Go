@@ -245,3 +245,6 @@ func InsertProjectRankInfo(database *sql.DB) error {
 	}
 	return nil
 }
+
+
+func InsertProjectCount
