@@ -2,6 +2,7 @@ package common
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"strconv"
 
@@ -10,13 +11,14 @@ import (
 )
 
 type DBHandler interface {
-	ReadProjectList(*ReqProjectsOfTheDay) *ResProjectsOfTheDay
-	ReadArtistList() *ResArtistOfTheMonth
+	ReadProjectList(*ReqProjectsOfTheDay) (*ResProjectsOfTheDay, error)
+	ReadArtistList() (*ResArtistOfTheMonth, error)
 	ReadUserInfo(string) *ResUserInfo
 	ReadUserID(string) (*int, error)
 	CreateUserInfo(AuthUserInfo) error
+	//UpdateUserInfo(*gin.Context) (string, *ReqJoinInfo, error)
 
-	UpdateUserInfo(string, *ReqJoinInfo) error
+	SaveJoinUserInfo(c *gin.Context) (string, error)
 	UpdateModificationUserInfo(string, *ReqJoinInfo) error
 
 	ReadProfileFrameInfo(string) (*ResProfileFrameInfo, error)
@@ -314,7 +316,6 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
   		id BIGINT  UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		project_id BIGINT UNSIGNED,
   		score  	   FLOAT,
-		rank	   int,
   		created_at TIMESTAMP,
   		updated_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
@@ -334,9 +335,7 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS user_rank (
   		id BIGINT  UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		user_id BIGINT UNSIGNED,
-  		day_score  	   FLOAT,
-		week_score 	   FLOAT, 
-		month_score    FLOAT,
+  		score  	   FLOAT, 
   		created_at TIMESTAMP,
   		updated_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
@@ -375,16 +374,10 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
 	return &mariadbHandler{db: database}
 }
 
-func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjectsOfTheDay {
+func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) (*ResProjectsOfTheDay, error) {
 
 	var respod *ResProjectsOfTheDay
 	respod = &ResProjectsOfTheDay{Date: reqpod.DemandDate}
-
-	period, err := strconv.Atoi(reqpod.DemandPeriod)
-	if err != nil {
-		log.Println("[LOG] rows err : ", err)
-		return nil
-	}
 
 	stmt, err := m.db.Prepare(`SELECT 
 						p.id, 
@@ -406,26 +399,26 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 
 	if err != nil {
 		log.Println("[ERR] stmt err : ", err)
-		return nil
+		return nil, err
 	}
 	defer stmt.Close()
 
 	var rows *sql.Rows
 
-	if period == 1 {
-		rows, err = stmt.Query(reqpod.DemandDate, period-1, reqpod.DemandDate, period)
+	if reqpod.DemandPeriod == 1 {
+		rows, err = stmt.Query(reqpod.DemandDate, reqpod.DemandPeriod-1, reqpod.DemandDate, reqpod.DemandPeriod)
 		if err != nil {
-			log.Println("[LOG] rows err : ", err)
-			return nil
+			log.Println("[ERR] rows err : ", err)
+			return nil, err
 		}
-	} else if period == 7 || period == 30 {
-		rows, err = stmt.Query(reqpod.DemandDate, period-1, reqpod.DemandDate, 1)
+	} else if reqpod.DemandPeriod == 7 || reqpod.DemandPeriod == 30 {
+		rows, err = stmt.Query(reqpod.DemandDate, reqpod.DemandPeriod-1, reqpod.DemandDate, 1)
 		if err != nil {
-			log.Println("[LOG] rows err : ", err)
-			return nil
+			log.Println("[ERR] rows err : ", err)
+			return nil, err
 		}
 	} else {
-		return nil
+		return nil, errors.New("[ERR] wrong period")
 	}
 
 	defer rows.Close()
@@ -441,11 +434,10 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 	for rows.Next() {
 		err := rows.Scan(&projectid, &title, &categorycode, &desc, &createdat, &sellcount, &artistnickname, &commentcount, &totalupvotecount, &price, &beta, &ranking)
 		if err != nil {
-			log.Println("[LOG] scan err : ", err)
-			return nil
+			log.Println("[ERR] scan err : ", err)
+			return nil, err
 		}
-		//project.ID = strconv.FormatUint(projectid, 10)
-		//project.Rank = strconv.FormatUint(ranking, 10)
+
 		project.ID = projectid
 		project.Title = title
 		project.CategoryCode = categorycode
@@ -470,14 +462,14 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 		rows, err = stmt.Query(respod.Project[i].ID)
 		if err != nil {
 			log.Println("[ERR] stmt query err : ", err)
-			return nil
+			return nil, err
 		}
 
 		for rows.Next() {
 			err := rows.Scan(&link)
 			if err != nil {
 				log.Println("[ERR] rows scan err : ", err)
-				return nil
+				return nil, err
 			}
 			respod.Project[i].ImageLink = link
 		}
@@ -488,35 +480,35 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) *ResProjec
 				  WHERE created_at 
 				  BETWEEN DATE_FORMAT(DATE_SUB(?, INTERVAL ? DAY),"%Y-%m-%d") AND DATE_FORMAT(DATE_ADD(?, INTERVAL ? DAY),"%Y-%m-%d")`)
 
-	if period == 1 {
-		rows, err = stmt.Query(reqpod.DemandDate, period-1, reqpod.DemandDate, period)
+	if reqpod.DemandPeriod == 1 {
+		rows, err = stmt.Query(reqpod.DemandDate, reqpod.DemandPeriod-1, reqpod.DemandDate, reqpod.DemandPeriod)
 		if err != nil {
-			log.Println("[LOG] rows err : ", err)
-			return nil
+			log.Println("[ERR] rows err : ", err)
+			return nil, err
 		}
-	} else if period == 7 || period == 30 {
-		rows, err = stmt.Query(reqpod.DemandDate, period-1, reqpod.DemandDate, 1)
+	} else if reqpod.DemandPeriod == 7 || reqpod.DemandPeriod == 30 {
+		rows, err = stmt.Query(reqpod.DemandDate, reqpod.DemandPeriod-1, reqpod.DemandDate, 1)
 		if err != nil {
-			log.Println("[LOG] rows err : ", err)
-			return nil
+			log.Println("[ERR] rows err : ", err)
+			return nil, err
 		}
 	} else {
-		return nil
+		return nil, errors.New("[ERR] wrong period")
 	}
 
 	var projectcnt string
 	for rows.Next() {
 		err := rows.Scan(&projectcnt)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		respod.Total = projectcnt
 	}
 
-	return respod
+	return respod, nil
 }
 
-func (m *mariadbHandler) ReadArtistList() *ResArtistOfTheMonth {
+func (m *mariadbHandler) ReadArtistList() (*ResArtistOfTheMonth, error) {
 
 	var resaom *ResArtistOfTheMonth
 	resaom = &ResArtistOfTheMonth{}
@@ -527,20 +519,19 @@ func (m *mariadbHandler) ReadArtistList() *ResArtistOfTheMonth {
 								u.image_link,
 								RANK() OVER(ORDER BY u_r.score DESC)
 								FROM user AS u INNER JOIN user_rank AS u_r ON u.id = u_r.user_id 
-								WHERE u_r.created_at BETWEEN  DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 1 MONTH),"%Y-%m-%d") AND DATE_FORMAT(NOW(),"%Y-%m-%d")
-								LIMIT 5;`)
+								WHERE DATE_FORMAT(u_r.created_at,"%Y-%m") = DATE_FORMAT(NOW(),"%Y-%m") LIMIT 5;`)
 
 	if err != nil {
-		log.Println("[LOG]prepare statement err : ", err)
-		return nil
+		log.Println("[ERR] prepare statement err : ", err)
+		return nil, err
 	}
 
 	defer stmt.Close()
 
 	rows, err := stmt.Query()
 	if err != nil {
-		log.Println("[LOG] query err : ", err)
-		return nil
+		log.Println("[ERR] query err : ", err)
+		return nil, err
 	}
 
 	defer rows.Close()
@@ -552,5 +543,5 @@ func (m *mariadbHandler) ReadArtistList() *ResArtistOfTheMonth {
 		resaom.Artist = append(resaom.Artist, artist)
 	}
 
-	return resaom
+	return resaom, nil
 }

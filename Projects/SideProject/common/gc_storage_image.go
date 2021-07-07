@@ -9,10 +9,8 @@ import (
 	"os"
 
 	"google.golang.org/api/iterator"
-	"google.golang.org/appengine"
 
 	"cloud.google.com/go/storage"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -97,7 +95,7 @@ func DeleteProjectImages(ctx context.Context, userid *int, projectid int64, data
 	return nil
 }
 
-//SelectProjectImageLinks is function to select project image links.
+//ReadProjectImageLinks is function to select project image links.
 func ReadProjectImageLinks(projectid int64, database *sql.DB) ([]string, error) {
 	var projectimagelinks []string
 	var projectimagelink string
@@ -132,58 +130,23 @@ func ReadProjectImageLinks(projectid int64, database *sql.DB) ([]string, error) 
 	return projectimagelinks, nil
 }
 
-//SaveImageFiles is function to get user's images
-func (i *Image) SaveImageFiles(c *gin.Context) (string, *ReqJoinInfo, error) {
-
-	multipartreader, err := c.Request.MultipartReader()
-	if err != nil {
-		log.Println("[ERR] multipartreader err : ", err)
-		return "", nil, err
-	}
-
-	reqjoininfo, filearray, err := GetJoinInfo(multipartreader)
-	if err != nil {
-		log.Println("[ERR] getjoininfo err : ", err)
-		return "", nil, err
-	}
-
-	ctx := appengine.NewContext(c.Request)
-	var filefullpath string
-	for _, file := range filearray {
-
-		filefullpath, err = CreateProfileImage(ctx, file, file.Name(), reqjoininfo.UserInfo.ID)
-		if err != nil {
-			log.Println("[ERR] create image file err : ", err)
-			err := DeleteProfileImage(ctx, reqjoininfo.UserInfo.ID)
-			if err != nil {
-				log.Println("[ERR] failed delete images err : ", err)
-				return "", nil, err
-			}
-			return "", nil, err
-		}
-		file.Close()
-	}
-	return filefullpath, reqjoininfo, nil
-}
-
-//CreateProfileImage is Function to post a imagefile for Google Storage cloud.
-func CreateProfileImage(ctx context.Context, file *os.File, filename string, userid string) (string, error) {
-
+//SaveUserImgFile is fuction to save user image to google cloud stroage.
+func SaveUserImgFile(args ArgsUpdateJoinUserInfo) (string, error) {
 	id := uuid.New()
-	bucket, err := GetBucket(ctx)
+	bucket, err := GetBucket(args.ctx)
 	if err != nil {
 		log.Println("[ERR] failed to get bucket err : ", err)
 		return "", err
 	}
 
-	storagedir := userdir + userid + "/" + imagedir
+	storagedir := userdir + args.joinuserinfo.UserInfo.ID + "/" + imagedir
 
-	object := bucket.Object(storagedir + filename)
-	writer := object.NewWriter(ctx)
+	object := bucket.Object(storagedir + args.userimgfile.Name())
+	writer := object.NewWriter(args.ctx)
 
 	writer.ObjectAttrs.Metadata = map[string]string{"firebaseStorageDownloadTokens": id.String()}
 
-	_, err = io.Copy(writer, file)
+	_, err = io.Copy(writer, args.userimgfile)
 	if err != nil {
 		log.Println("[ERR] io copy err : ", err)
 		return "", err
@@ -191,11 +154,11 @@ func CreateProfileImage(ctx context.Context, file *os.File, filename string, use
 
 	writer.Close()
 
-	return storagedir + filename, nil
+	return storagedir + args.userimgfile.Name(), nil
 }
 
-//DeleteProfileImage is function to check thage the user image folder exists in storage.
-func DeleteProfileImage(ctx context.Context, userid string) error {
+//DeleteUserImgFile is function to check thage the user image folder exists in storage.
+func DeleteUserImgFile(ctx context.Context, userid string) error {
 	var prefix = userdir + userid + "/" + imagedir
 	var delimeter = "/"
 

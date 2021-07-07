@@ -1,13 +1,26 @@
 package common
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"os"
+
+	"github.com/gin-gonic/gin"
+	"google.golang.org/appengine"
 )
+
+//ArgsUpdateJoinUserInfo is a collection of extracted prameters that is user's information.
+type ArgsUpdateJoinUserInfo struct {
+	ctx          context.Context
+	userimgfile  *os.File
+	joinuserinfo *ReqJoinInfo
+	database     *sql.DB
+}
 
 //ReadUserInfo is fuction to read user information.
 func (m *mariadbHandler) ReadUserInfo(sessionid string) *ResUserInfo {
@@ -113,36 +126,71 @@ func (m *mariadbHandler) CreateUserInfo(authuserinfo AuthUserInfo) error {
 	return nil
 }
 
-//UpdateUserInfo is function to update user information.
-func (m *mariadbHandler) UpdateUserInfo(imglink string, reqjoininfo *ReqJoinInfo) error {
-
-	tx, err := m.db.Begin()
+//SaveImageFiles is function to get user's images
+func (m *mariadbHandler) SaveJoinUserInfo(c *gin.Context) (string, error) {
+	var args ArgsUpdateJoinUserInfo
+	multipartreader, err := c.Request.MultipartReader()
 	if err != nil {
-		log.Println("[ERR] begin err : ", err)
-		return err
+		log.Println("[ERR] multipartreader err : ", err)
+		return "", err
 	}
 
+	args.joinuserinfo, args.userimgfile, err = ExtractJoinUserInfo(multipartreader)
+	if err != nil {
+		log.Println("[ERR] getjoininfo err : ", err)
+		return "", err
+	}
+	defer args.userimgfile.Close()
+
+	args.ctx = appengine.NewContext(c.Request)
+	args.database = m.db
+
+	filefullpath, err := UpdateJoinUserInfo(args)
+	if err != nil {
+		log.Println("[ERR] create image file err : ", err)
+
+		return "", err
+	}
+
+	return filefullpath, nil
+}
+
+//UpdateJoinUserInfo is Function to post a imagefile for Google Storage cloud.
+func UpdateJoinUserInfo(args ArgsUpdateJoinUserInfo) (string, error) {
+
+	tx, err := args.database.Begin()
+	if err != nil {
+		log.Println("[ERR] begin err : ", err)
+		return "", err
+	}
+
+	defer DeleteUserImgFile(args.ctx, args.joinuserinfo.UserInfo.ID)
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`UPDATE user SET name=?, nickname=?, email=?,image_link=?,introduction=?,bank=?,account=?,updated_at=NOW()
 	WHERE id=?`)
 	if err != nil {
 		log.Println("[ERR] transaction err : ", err)
-		return err
+		return "", err
 	}
-
 	defer stmt.Close()
 
-	result, err := stmt.Exec(reqjoininfo.UserInfo.Name, reqjoininfo.UserInfo.Nickname, reqjoininfo.UserInfo.Email, imglink, reqjoininfo.UserInfo.Introduction, reqjoininfo.AccountInfo.Bank, reqjoininfo.AccountInfo.Account, reqjoininfo.UserInfo.ID)
+	savedimagepath, err := SaveUserImgFile(args)
+	if err != nil {
+		log.Println("[ERR] failed to save user image file to google cloud storage err : ", err)
+		return "", err
+	}
+
+	result, err := stmt.Exec(args.joinuserinfo.UserInfo.Name, args.joinuserinfo.UserInfo.Nickname, args.joinuserinfo.UserInfo.Email, savedimagepath, args.joinuserinfo.UserInfo.Introduction, args.joinuserinfo.AccountInfo.Bank, args.joinuserinfo.AccountInfo.Account, args.joinuserinfo.UserInfo.ID)
 	if err != nil {
 		log.Println("[ERR] Exec err:", err)
-		return err
+		return "", err
 	}
 
 	rowcnt, err := result.RowsAffected()
 	if err != nil {
 		log.Println("[ERR] rows affected err:", err)
-		return err
+		return "", err
 	}
 
 	log.Println("[LOG] affected rows count :", rowcnt)
@@ -150,16 +198,17 @@ func (m *mariadbHandler) UpdateUserInfo(imglink string, reqjoininfo *ReqJoinInfo
 	err = tx.Commit()
 	if err != nil {
 		log.Println("[ERR] commit err : ", err)
-		return err
+		return "", err
 	}
 
-	return nil
+	return savedimagepath, nil
 }
 
-//GetJoinInfo is function to get join information inserted.
-func GetJoinInfo(multipartreader *multipart.Reader) (*ReqJoinInfo, []*os.File, error) {
+//ExtractJoinUserInfo is function to get join information inserted.
+func ExtractJoinUserInfo(multipartreader *multipart.Reader) (*ReqJoinInfo, *os.File, error) {
 	var reqjoininfo ReqJoinInfo
-	var filearray []*os.File
+	var userimgfile *os.File
+
 	for {
 		part, err := multipartreader.NextPart()
 
@@ -186,19 +235,19 @@ func GetJoinInfo(multipartreader *multipart.Reader) (*ReqJoinInfo, []*os.File, e
 				log.Println("[ERR] hson unmarshal err : ", err)
 				return nil, nil, err
 			}
-		case "media":
-			file, err := os.Create(part.Header.Get("Content-Filename"))
+		case "userimage":
+			userimgfile, err = os.Create(part.Header.Get("Content-Filename"))
 			if err != nil {
 				log.Println("[ERR] file create err : ", err)
 				return nil, nil, err
 			}
-			_, err = file.Write(data)
+			_, err = userimgfile.Write(data)
 			if err != nil {
 				log.Println("[ERR] file write err : ", err)
 				return nil, nil, err
 			}
-			filearray = append(filearray, file)
+
 		}
 	}
-	return &reqjoininfo, filearray, nil
+	return &reqjoininfo, userimgfile, nil
 }

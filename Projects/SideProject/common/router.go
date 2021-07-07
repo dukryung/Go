@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-playground/validator/v10"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/unrolled/render"
@@ -34,8 +32,8 @@ type project struct {
 
 //ReqProjectsOfTheDay is structure to contain request informationå.
 type ReqProjectsOfTheDay struct {
-	DemandDate   time.Time `json:"demand_date" time_format:"2006-01-02" time_utc:"1" binding:"required"`
-	DemandPeriod string    `json:"demand_period"`
+	DemandDate   time.Time `json:"demand_date" binding:"required"`
+	DemandPeriod int       `json:"demand_period" binding:"required"`
 }
 
 //ResProjectsOfTheDay is structure to contain response information.
@@ -43,7 +41,7 @@ type ResProjectsOfTheDay struct {
 	Date           time.Time     `json:"date"`
 	Project        []ProjectList `json:"project"`
 	Total          string        `json:"total"`
-	Period         string        `json:"period"`
+	Period         int           `json:"period"`
 	RankLastNumber string        `json:"rank_last_number"`
 }
 
@@ -107,45 +105,25 @@ type Account struct {
 	AgreePolicy bool   `json:"agree_policy"`
 }
 
+func (p *project) GetIndexHandler(c *gin.Context) {
+
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"title": "Main Page",
+	})
+}
+
 func (p *project) GetProjectInfoHandler(c *gin.Context) {
-	var reqpod = &ReqProjectsOfTheDay{}
-
-	if err := c.ShouldBind(&reqpod); err == nil {
-
-		log.Println("@@@@@@@@@@@@@@@@@@@@@@")
-		log.Println("!@#!@#!@# reqpod : ", reqpod)
-		validate := validator.New()
-		if err := validate.Struct(&reqpod); err != nil {
-			log.Println("[ERR] invalid information err : ", err)
-			c.JSON(http.StatusBadRequest, nil)
-			return
-		}
-	} else {
+	reqpod := &ReqProjectsOfTheDay{}
+	err := c.ShouldBindJSON(reqpod)
+	if err != nil {
 		log.Println("[ERR] json err : ", err)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 
-	log.Println("!!!!!!!!!!!!", reqpod)
-	data, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		log.Println("[ERR] readAll err : ", err)
-		c.JSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	err = json.Unmarshal(data, &reqpod)
-	if err != nil {
-		log.Println("[ERR] json unmarshal err : ", err)
-		c.JSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	log.Println("[LOG] reqpod information : ", reqpod)
-
-	respod := p.db.ReadProjectList(reqpod)
+	respod, err := p.db.ReadProjectList(reqpod)
 	if respod == nil {
-		log.Println("[LOG] empty project list")
+		log.Println("[ERR] empty project list")
 		c.JSON(http.StatusInternalServerError, nil)
 		return
 	}
@@ -155,11 +133,13 @@ func (p *project) GetProjectInfoHandler(c *gin.Context) {
 }
 
 func (p *project) GetArtistInfoHandler(c *gin.Context) {
-	resaom := p.db.ReadArtistList()
-	if resaom == nil {
-		log.Println("[LOG] resaom : ", resaom)
-		log.Println("[LOG] empty artist list")
+	resaom, err := p.db.ReadArtistList()
+	if err != nil {
+		log.Println("[ERR] failed to read resaom  err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
 	}
+
 	c.JSON(http.StatusOK, resaom)
 }
 
@@ -173,28 +153,11 @@ func (p *project) GetUserInfoHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resuser)
 }
 
-func (p *project) GetIndexHandler(c *gin.Context) {
-
-	c.HTML(http.StatusOK, "index.html", gin.H{
-		"title": "Main Page",
-	})
-}
-
 func (p *project) PutUserInfoHandler(c *gin.Context) {
 
-	var img Image
-
-	filefullpath, reqjoininfo, err := img.SaveImageFiles(c)
+	filefullpath, err := p.db.SaveJoinUserInfo(c)
 	if err != nil {
 		log.Println("[ERR] get image file err : ", err)
-		c.JSON(http.StatusInternalServerError, nil)
-		return
-	}
-	log.Println("[LOG] img link array : ", filefullpath)
-
-	err = p.db.UpdateUserInfo(filefullpath, reqjoininfo)
-	if err != nil {
-		log.Println("[ERR] update user info err :", err)
 		c.JSON(http.StatusInternalServerError, nil)
 		return
 	}

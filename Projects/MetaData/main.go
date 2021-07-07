@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+var datesub = "DATE_SUB(NOW(), INTERVAL 1 DAY)"
 
 func main() {
 	database, err := sql.Open("mysql", "dukryung:superunderdog@tcp(127.0.0.1:3306)/test")
@@ -32,6 +35,12 @@ func main() {
 		panic(err)
 	}
 
+	err = InsertUserRankInfo(database)
+	if err != nil {
+		log.Println("[ERR] insert user rank info err : ", err)
+		panic(err)
+	}
+
 	err = InsertProjectInfo(database)
 	if err != nil {
 		log.Println("[ERR] insert project info err : ", err)
@@ -47,7 +56,15 @@ func main() {
 
 //InsertUserInfo is function to insert user information.
 func InsertUserInfo(database *sql.DB) error {
+	n := 1
+	date := time.Now().AddDate(0, 0, -9)
+
 	for i := 1; i < 1001; i++ {
+
+		if i == (100*n + 1) {
+			date = date.AddDate(0, 0, 1)
+			n++
+		}
 
 		sessionid := fmt.Sprintf("sessionid_%d", i)
 		name := fmt.Sprintf("dukryung_%d", i)
@@ -64,7 +81,7 @@ func InsertUserInfo(database *sql.DB) error {
 
 		query := fmt.Sprintf(`INSERT IGNORE INTO user 
 		(session_id, name, nickname, email, agree_email_marketing,image_link,introduction,social,cash,bank,account,agree_policy, created_at, updated_at) 
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?, NOW(), NOW())`)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
 
 		stmt, err := database.Prepare(query)
 		if err != nil {
@@ -73,7 +90,7 @@ func InsertUserInfo(database *sql.DB) error {
 		}
 		defer stmt.Close()
 
-		result, err := stmt.Exec(sessionid, name, nickname, email, agreemarketing, imagelink, introduction, social, cash, bank, account, agreepolicy)
+		result, err := stmt.Exec(sessionid, name, nickname, email, agreemarketing, imagelink, introduction, social, cash, bank, account, agreepolicy, date, date)
 		if err != nil {
 			log.Println("[ERR] statement execution err : ", err)
 			panic(err)
@@ -91,9 +108,57 @@ func InsertUserInfo(database *sql.DB) error {
 	return nil
 }
 
-func InsertProjectInfo(database *sql.DB) error {
+func InsertUserRankInfo(database *sql.DB) error {
+	n := 1
+	date := time.Now().AddDate(0, 0, -9)
+
 	for i := 1; i < 1001; i++ {
 
+		if i == (100*n + 1) {
+			date = date.AddDate(0, 0, 1)
+			n++
+		}
+
+		userid := fmt.Sprintf("%d", i)
+		score := fmt.Sprintf("%f", rand.Float64()*10+80)
+
+		query := fmt.Sprintf(`INSERT IGNORE INTO user_rank 
+		(user_id, score, created_at, updated_at) 
+		VALUES(?,?,?,?)`)
+
+		stmt, err := database.Prepare(query)
+		if err != nil {
+			log.Println("[ERR] prepare statement err : ", err)
+			panic(err)
+		}
+		defer stmt.Close()
+
+		result, err := stmt.Exec(userid, score, date, date)
+		if err != nil {
+			log.Println("[ERR] statement execution err : ", err)
+			panic(err)
+		}
+
+		affectedrowscnt, err := result.RowsAffected()
+		if err != nil {
+			log.Println("[ERR] affected rows err : ", err)
+			panic(err)
+		}
+
+		log.Println("[LOG] affected rows count : ", affectedrowscnt)
+	}
+	return nil
+
+}
+
+func InsertProjectInfo(database *sql.DB) error {
+	n := 1
+	date := time.Now().AddDate(0, 0, -9)
+	for i := 1; i < 1001; i++ {
+		if i == (100*n + 1) {
+			date = date.AddDate(0, 0, 1)
+			n++
+		}
 		for j := 1; j < 6; j++ {
 			userid := i
 			categoryid := 1
@@ -110,7 +175,7 @@ func InsertProjectInfo(database *sql.DB) error {
 
 			query := fmt.Sprintf(`INSERT IGNORE INTO project 
 			(user_id, category_id, title, description, price,sell_count,total_upvote_count,comment_count,video_link,beta,beta_link,origin_link, created_at, updated_at) 
-			VALUES(?,?,?,?,?,?,?,?,?,?,?,?, NOW(), NOW())`)
+			VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
 
 			stmt, err := database.Prepare(query)
 			if err != nil {
@@ -119,7 +184,7 @@ func InsertProjectInfo(database *sql.DB) error {
 			}
 			defer stmt.Close()
 
-			result, err := stmt.Exec(userid, categoryid, title, description, price, sellcount, totalupvotecount, commentcount, videolink, beta, betalink, originlink)
+			result, err := stmt.Exec(userid, categoryid, title, description, price, sellcount, totalupvotecount, commentcount, videolink, beta, betalink, originlink, date, date)
 			if err != nil {
 				log.Println("[ERR] statement execution err : ", err)
 				panic(err)
@@ -140,36 +205,43 @@ func InsertProjectInfo(database *sql.DB) error {
 }
 
 func InsertProjectRankInfo(database *sql.DB) error {
+	n := 1
+	var projectid int
+	date := time.Now().AddDate(0, 0, -9)
 	for i := 1; i < 1001; i++ {
-
-		projectid := fmt.Sprintf("%d", i)
-		score := fmt.Sprintf("%f", rand.Float64()*10+80)
-		rank := 0
-
-		query := fmt.Sprintf(`INSERT IGNORE INTO project_rank 
-		(project_id, score, rank, created_at, updated_at) 
-		VALUES(?,?,?,NOW(), NOW())`)
-
-		stmt, err := database.Prepare(query)
-		if err != nil {
-			log.Println("[ERR] prepare statement err : ", err)
-			panic(err)
+		if i == (100*n + 1) {
+			date = date.AddDate(0, 0, 1)
+			n++
 		}
-		defer stmt.Close()
+		for j := 1; j < 6; j++ {
+			projectid++
+			score := fmt.Sprintf("%f", rand.Float64()*10+80)
 
-		result, err := stmt.Exec(projectid, score, rank)
-		if err != nil {
-			log.Println("[ERR] statement execution err : ", err)
-			panic(err)
+			query := fmt.Sprintf(`INSERT IGNORE INTO project_rank 
+		(project_id, score, created_at, updated_at) 
+		VALUES(?,?,?,?)`)
+
+			stmt, err := database.Prepare(query)
+			if err != nil {
+				log.Println("[ERR] prepare statement err : ", err)
+				panic(err)
+			}
+			defer stmt.Close()
+
+			result, err := stmt.Exec(projectid, score, date, date)
+			if err != nil {
+				log.Println("[ERR] statement execution err : ", err)
+				panic(err)
+			}
+
+			affectedrowscnt, err := result.RowsAffected()
+			if err != nil {
+				log.Println("[ERR] affected rows err : ", err)
+				panic(err)
+			}
+
+			log.Println("[LOG] affected rows count : ", affectedrowscnt)
 		}
-
-		affectedrowscnt, err := result.RowsAffected()
-		if err != nil {
-			log.Println("[ERR] affected rows err : ", err)
-			panic(err)
-		}
-
-		log.Println("[LOG] affected rows count : ", affectedrowscnt)
 	}
 	return nil
 }

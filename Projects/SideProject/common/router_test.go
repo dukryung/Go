@@ -91,7 +91,7 @@ func TestPutUserInfoHandler(t *testing.T) {
 	for i := 1; i < 4; i++ {
 		mediaheader := textproto.MIMEHeader{}
 		mediaheader.Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"ID_photo_temp_%d.jpeg\"", i))
-		mediaheader.Set("Content-ID", "media")
+		mediaheader.Set("Content-ID", "userimage")
 		mediaheader.Set("Content-Filename", fmt.Sprintf("ID_photo_temp_%d.jpeg", i))
 
 		file, err := os.Open(fmt.Sprintf("../ID_photo_temp_%d.jpeg", i))
