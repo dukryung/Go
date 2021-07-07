@@ -103,25 +103,21 @@ type ReqPersonalInformation struct {
 	Account Account `json:"account"`
 }
 
-func (m *mariadbHandler) ReadProfileFrameInfo(sessionid string) (*ResProfileFrameInfo, error) {
+func (m *mariadbHandler) ReadProfileFrameInfo(userid int) (*ResProfileFrameInfo, error) {
 
-	var resprofileframeinfo *ResProfileFrameInfo
+	var resprofileframeinfo = &ResProfileFrameInfo{}
 
 	stmt, err := m.db.Prepare(`SELECT 
-				  u.id, 
-				  u.nickname,
-				  u.introduction,
-				  u.created_at,
-				  COUNT(p.id),
-				  COUNT(sh.id),
-				  COUNT(bh.id),
-				  COUNT(wh.id)
-				  FROM user AS u 
-				  INNER JOIN project AS p ON p.user_id = u.id 
-				  INNER JOIN sell_history as sh ON sh.user_id = u.id
-				  INNER JOIN buy_history as bh ON bh.user_id = u.id
-				  INNER JOIN withdraw_history as bh ON wh.user_id = u.id
-				  WHERE u.session_id= ?`)
+	u.id, 
+	u.nickname,
+	u.introduction,
+	u.created_at,
+	(SELECT COUNT(id) FROM project WHERE user_id = ?),
+	(SELECT COUNT(id) FROM sell_history WHERE user_id = ?),
+	(SELECT COUNT(id) FROM buy_history WHERE user_id = ?),
+	(SELECT COUNT(id) FROM withdraw_history WHERE user_id = ?)
+	FROM user AS u 
+	WHERE id = ?;`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil, err
@@ -129,7 +125,7 @@ func (m *mariadbHandler) ReadProfileFrameInfo(sessionid string) (*ResProfileFram
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(sessionid)
+	rows, err := stmt.Query(userid, userid, userid, userid, userid)
 	if err != nil {
 		log.Println("[ERR] stmt query err : ", err)
 		return nil, err

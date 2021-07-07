@@ -16,12 +16,11 @@ type DBHandler interface {
 	ReadUserInfo(string) *ResUserInfo
 	ReadUserID(string) (*int, error)
 	CreateUserInfo(AuthUserInfo) error
-	//UpdateUserInfo(*gin.Context) (string, *ReqJoinInfo, error)
 
-	SaveJoinUserInfo(c *gin.Context) (string, error)
+	SaveJoinUserInfo(*gin.Context) (string, error)
 	UpdateModificationUserInfo(string, *ReqJoinInfo) error
 
-	ReadProfileFrameInfo(string) (*ResProfileFrameInfo, error)
+	ReadProfileFrameInfo(int) (*ResProfileFrameInfo, error)
 	ReadProfileProjectInfo(string) (*ResProfileProjectInfo, error)
 	ReadProfileSellInfo(string) (*ResProfileSellInfo, error)
 	ReadProfileBuyInfo(string) (*ResProfileBuyInfo, error)

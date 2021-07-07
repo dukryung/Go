@@ -106,7 +106,7 @@ func TestPutUserInfoHandler(t *testing.T) {
 		io.Copy(part, file)
 	}
 
-	reqputuserinfo.UserInfo.ID = "1"
+	reqputuserinfo.UserInfo.ID = 1
 	reqputuserinfo.UserInfo.Name = "dukryung_1"
 	reqputuserinfo.UserInfo.Nickname = "duck_1"
 	reqputuserinfo.UserInfo.Email = "dukryung_2@naver.com"
@@ -140,4 +140,43 @@ func TestPutUserInfoHandler(t *testing.T) {
 
 	assert.Equal(http.StatusOK, res.StatusCode)
 
+}
+
+type TestUser struct {
+	ID int `json:"id"`
+}
+
+func TestGetProfileFramInfoHandler(t *testing.T) {
+	var userinfo TestUser
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	userinfo.ID = 111
+
+	data, err := json.Marshal(userinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err")
+	}
+
+	body := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/profileuser/frame", body)
+	if err != nil {
+		log.Println("[ERR] new request err")
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client err :", err)
+	}
+	assert.Equal(http.StatusOK, res.StatusCode)
+	frameinfo, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all data err : ", err)
+	}
+
+	log.Println("[LOG] response data :", string(frameinfo))
 }

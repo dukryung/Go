@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -25,42 +24,6 @@ Logged in with <a href="/auth/naver/signup">naver</a>
 </br>
 </body></html>
 `
-
-type project struct {
-	db DBHandler
-}
-
-//ReqProjectsOfTheDay is structure to contain request informationå.
-type ReqProjectsOfTheDay struct {
-	DemandDate   time.Time `json:"demand_date" binding:"required"`
-	DemandPeriod int       `json:"demand_period" binding:"required"`
-}
-
-//ResProjectsOfTheDay is structure to contain response information.
-type ResProjectsOfTheDay struct {
-	Date           time.Time     `json:"date"`
-	Project        []ProjectList `json:"project"`
-	Total          string        `json:"total"`
-	Period         int           `json:"period"`
-	RankLastNumber string        `json:"rank_last_number"`
-}
-
-//ProjectList is structure to get project list information.
-type ProjectList struct {
-	ID            string `json:"id"`
-	Title         string `json:"title"`
-	CategoryCode  string `json:"category_id"`
-	Description   string `json:"desc"`
-	ImageLink     string `json:"image_link"`
-	CreatedAt     string `json:"created_at"`
-	SellCount     string `json:"sell_cnt"`
-	AristNickName string `json:"artist_nickname"`
-	CommentCount  string `json:"comment_count"`
-	UpvoteCount   string `json:"upvote_count"`
-	Price         string `json:"price"`
-	Beta          string `json:"beta"`
-	Rank          string `json:"rank"`
-}
 
 //ResArtistOfTheMonth is sturcture to contain response artist information.
 type ResArtistOfTheMonth struct {
@@ -88,21 +51,6 @@ type ResEmailInfo struct {
 type ReqJoinInfo struct {
 	UserInfo    User    `json:"user"`
 	AccountInfo Account `json:"account"`
-}
-type User struct {
-	ID                  string `json:"id"`
-	Name                string `json:"name"`
-	Nickname            string `json:"nickname"`
-	Email               string `json:"email"`
-	Introduction        string `json:"introduction"`
-	AgreeEmailMarketing bool   `json:"agree_email_marketing"`
-}
-
-type Account struct {
-	UserID      string `json:"user_id"`
-	Bank        int    `json:"bank"`
-	Account     string `json:"account"`
-	AgreePolicy bool   `json:"agree_policy"`
 }
 
 func (p *project) GetIndexHandler(c *gin.Context) {
@@ -172,11 +120,16 @@ func (p *project) GetProfileHandler(c *gin.Context) {
 	})
 }
 func (p *project) GetProfileFramInfoHandler(c *gin.Context) {
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
+	userinfo := &User{}
 
-	resprofileframeinfo, err := p.db.ReadProfileFrameInfo(sessionid)
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user idd err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resprofileframeinfo, err := p.db.ReadProfileFrameInfo(userinfo.ID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile frame information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"time"
 
 	"google.golang.org/appengine"
 
@@ -64,6 +65,42 @@ type ReqUploadProjectInfo struct {
 	Desc        string `json:"desc"`
 	Price       int    `json:"price"`
 	YoutubeLink string `json:"youtube"`
+}
+
+type project struct {
+	db DBHandler
+}
+
+//ReqProjectsOfTheDay is structure to contain request informationå.
+type ReqProjectsOfTheDay struct {
+	DemandDate   time.Time `json:"demand_date" binding:"required"`
+	DemandPeriod int       `json:"demand_period" binding:"required"`
+}
+
+//ResProjectsOfTheDay is structure to contain response information.
+type ResProjectsOfTheDay struct {
+	Date           time.Time     `json:"date"`
+	Project        []ProjectList `json:"project"`
+	Total          string        `json:"total"`
+	Period         int           `json:"period"`
+	RankLastNumber string        `json:"rank_last_number"`
+}
+
+//ProjectList is structure to get project list information.
+type ProjectList struct {
+	ID            string `json:"id"`
+	Title         string `json:"title"`
+	CategoryCode  string `json:"category_id"`
+	Description   string `json:"desc"`
+	ImageLink     string `json:"image_link"`
+	CreatedAt     string `json:"created_at"`
+	SellCount     string `json:"sell_cnt"`
+	AristNickName string `json:"artist_nickname"`
+	CommentCount  string `json:"comment_count"`
+	UpvoteCount   string `json:"upvote_count"`
+	Price         string `json:"price"`
+	Beta          string `json:"beta"`
+	Rank          string `json:"rank"`
 }
 
 func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(c *gin.Context) (*ResProjectDetailInfo, error) {

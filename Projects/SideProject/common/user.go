@@ -14,6 +14,22 @@ import (
 	"google.golang.org/appengine"
 )
 
+type User struct {
+	ID                  int    `json:"id"`
+	Name                string `json:"name"`
+	Nickname            string `json:"nickname"`
+	Email               string `json:"email"`
+	Introduction        string `json:"introduction"`
+	AgreeEmailMarketing bool   `json:"agree_email_marketing"`
+}
+
+type Account struct {
+	UserID      string `json:"user_id"`
+	Bank        int    `json:"bank"`
+	Account     string `json:"account"`
+	AgreePolicy bool   `json:"agree_policy"`
+}
+
 //ArgsUpdateJoinUserInfo is a collection of extracted prameters that is user's information.
 type ArgsUpdateJoinUserInfo struct {
 	ctx          context.Context
