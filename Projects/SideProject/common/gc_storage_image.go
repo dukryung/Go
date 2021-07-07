@@ -158,9 +158,31 @@ func SaveUserImgFile(args ArgsUpdateJoinUserInfo) (string, error) {
 }
 
 //DeleteUserImgFile is function to check thage the user image folder exists in storage.
-func DeleteUserImgFile(ctx context.Context, userid string) error {
-	var prefix = userdir + userid + "/" + imagedir
-	var delimeter = "/"
+func DeleteUserImgFile(ctx context.Context, userid string, database *sql.DB) error {
+
+	var userimglink string
+	stmt, err := database.Prepare(`SELECT image_link FROM user WHERE id = ?`)
+	if err != nil {
+		log.Println("[ERR] prepare statement err : ", err)
+		return err
+	}
+
+	defer stmt.Close()
+
+	rows, err := stmt.Query(userid)
+	if err != nil {
+		log.Println("[ERR] statement query err :", err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err = rows.Scan(&userimglink)
+		if err != nil {
+			log.Println("[ERR] rows scan err : ", err)
+			return err
+		}
+	}
 
 	bucket, err := GetBucket(ctx)
 	if err != nil {
@@ -168,7 +190,8 @@ func DeleteUserImgFile(ctx context.Context, userid string) error {
 		return err
 	}
 
-	it := bucket.Objects(ctx, &storage.Query{Prefix: prefix, Delimiter: delimeter})
+	var delimeter = "/"
+	it := bucket.Objects(ctx, &storage.Query{Prefix: userimglink, Delimiter: delimeter})
 
 	for {
 		attrs, err := it.Next()
@@ -182,10 +205,12 @@ func DeleteUserImgFile(ctx context.Context, userid string) error {
 			return err
 		}
 
-		err = bucket.Object(attrs.Name).Delete(ctx)
-		if err != nil {
-			log.Println("[ERR] failed to delete object err : ", err)
-			return err
+		if userimglink != attrs.Name {
+			err = bucket.Object(attrs.Name).Delete(ctx)
+			if err != nil {
+				log.Println("[ERR] failed to delete object err : ", err)
+				return err
+			}
 		}
 	}
 

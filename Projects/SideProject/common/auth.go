@@ -12,12 +12,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
 	"golang.org/x/oauth2/kakao"
 
 	"golang.org/x/oauth2/facebook"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/sessions"
 
 	"golang.org/x/oauth2"
@@ -143,6 +142,9 @@ func CheckSessionValidity(c *gin.Context) {
 	}
 
 	val := session.Values["id"]
+	//test -----------------
+	val = 1
+	//-------------------test
 	if val == nil {
 		log.Println("[ERR] session value err : ", val)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})

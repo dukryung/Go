@@ -106,10 +106,11 @@ func TestPutUserInfoHandler(t *testing.T) {
 		io.Copy(part, file)
 	}
 
-	reqputuserinfo.UserInfo.ID = "1123"
-	reqputuserinfo.UserInfo.Name = "dukryung"
-	reqputuserinfo.UserInfo.Nickname = "superunderdog"
-	reqputuserinfo.UserInfo.Introduction = "dukryung is geniune"
+	reqputuserinfo.UserInfo.ID = "1"
+	reqputuserinfo.UserInfo.Name = "dukryung_1"
+	reqputuserinfo.UserInfo.Nickname = "duck_1"
+	reqputuserinfo.UserInfo.Email = "dukryung_2@naver.com"
+	reqputuserinfo.UserInfo.Introduction = "introduction_1"
 	reqputuserinfo.UserInfo.AgreeEmailMarketing = true
 	reqputuserinfo.AccountInfo.UserID = "777777"
 	reqputuserinfo.AccountInfo.Bank = 1

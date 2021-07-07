@@ -154,7 +154,6 @@ func (p *project) GetUserInfoHandler(c *gin.Context) {
 }
 
 func (p *project) PutUserInfoHandler(c *gin.Context) {
-
 	filefullpath, err := p.db.SaveJoinUserInfo(c)
 	if err != nil {
 		log.Println("[ERR] get image file err : ", err)

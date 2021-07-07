@@ -140,6 +140,7 @@ func (m *mariadbHandler) SaveJoinUserInfo(c *gin.Context) (string, error) {
 		log.Println("[ERR] getjoininfo err : ", err)
 		return "", err
 	}
+
 	defer args.userimgfile.Close()
 
 	args.ctx = appengine.NewContext(c.Request)
@@ -164,7 +165,7 @@ func UpdateJoinUserInfo(args ArgsUpdateJoinUserInfo) (string, error) {
 		return "", err
 	}
 
-	defer DeleteUserImgFile(args.ctx, args.joinuserinfo.UserInfo.ID)
+	defer DeleteUserImgFile(args.ctx, args.joinuserinfo.UserInfo.ID, args.database)
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`UPDATE user SET name=?, nickname=?, email=?,image_link=?,introduction=?,bank=?,account=?,updated_at=NOW()

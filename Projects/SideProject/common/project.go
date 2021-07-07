@@ -21,8 +21,8 @@ type ReqProjectDetailInfo struct {
 
 type ResProjectDetailInfo struct {
 	ProjectDetailInfo           ProjectDetail                `json:"projectdetail"`
-	ProjectDetailImageLinksInfo []ProjectDetailImageLinkInfo `json:"image_links`
-	ProjectCommentInfo          []ProjectDetailCommentInfo   `json:"comments`
+	ProjectDetailImageLinksInfo []ProjectDetailImageLinkInfo `json:"image_links"`
+	ProjectCommentInfo          []ProjectDetailCommentInfo   `json:"comments"`
 }
 
 type ProjectDetail struct {
