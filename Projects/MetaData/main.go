@@ -52,6 +52,24 @@ func main() {
 		log.Println("[ERR] insert project info err : ", err)
 		panic(err)
 	}
+
+	err = InsertBuyHistory(database)
+	if err != nil {
+		log.Println("[ERR] insert buy history info err : ", err)
+		panic(err)
+	}
+
+	err = InsertSellHistory(database)
+	if err != nil {
+		log.Println("[ERR] insert buy history info err : ", err)
+		panic(err)
+	}
+
+	err = InsertWithdrawHistory((database))
+	if err != nil {
+		log.Println("[ERR] insert withdraw history info err : ", err)
+		panic(err)
+	}
 }
 
 //InsertUserInfo is function to insert user information.
@@ -246,5 +264,141 @@ func InsertProjectRankInfo(database *sql.DB) error {
 	return nil
 }
 
+func InsertBuyHistory(database *sql.DB) error {
+	var n = 1
+	var sellerid int
+	var userid int
+	var sellernickname string
+	for i := 1; i < 101; i++ {
 
-func InsertProjectCount
+		for j := 1; j < 6; j++ {
+			projectid := j
+			price := 10000 + i
+			importid := 1000 + i
+
+			if i <= 5*n {
+				userid = 80 + i
+				sellerid = n
+				sellernickname = fmt.Sprintf("dukryung_%d", n)
+			} else {
+				n++
+				sellerid = n
+				sellernickname = fmt.Sprintf("dukryung_%d", n)
+			}
+
+			stmt, err := database.Prepare(`INSERT IGNORE INTO buy_history
+							  (user_id,project_id,seller_id,seller_nickname,price,import_id)
+							  VALUES(?,?,?,?,?,?)`)
+			if err != nil {
+				log.Println("[ERR] prepare statement err : ", err)
+				return err
+			}
+
+			defer stmt.Close()
+
+			result, err := stmt.Exec(userid, projectid, sellerid, sellernickname, price, importid)
+			if err != nil {
+				log.Println("[ERR] stmt excution err : ", err)
+			}
+
+			affectedrowscnt, err := result.RowsAffected()
+			if err != nil {
+				log.Println("[ERR] affected rows err : ", err)
+				panic(err)
+			}
+
+			log.Println("[LOG] affected rows count : ", affectedrowscnt)
+		}
+	}
+	return nil
+}
+func InsertSellHistory(database *sql.DB) error {
+	var n = 1
+	var sellerid int
+	var userid int
+	var sellernickname string
+	for i := 1; i < 101; i++ {
+
+		for j := 1; j < 6; j++ {
+			projectid := i
+			price := 10000 + i
+			importid := 1000 + i
+
+			if i <= 5*n {
+				userid = 80 + i
+				sellerid = n
+				sellernickname = fmt.Sprintf("dukryung_%d", n)
+			} else {
+				n++
+				sellerid = n
+				sellernickname = fmt.Sprintf("dukryung_%d", n)
+			}
+
+			stmt, err := database.Prepare(`INSERT IGNORE INTO sell_history
+							  (user_id,project_id,buyer_id,buyer_nickname,price,import_id)
+							  VALUES(?,?,?,?,?,?)`)
+			if err != nil {
+				log.Println("[ERR] prepare statement err : ", err)
+				return err
+			}
+
+			defer stmt.Close()
+
+			result, err := stmt.Exec(userid, projectid, sellerid, sellernickname, price, importid)
+			if err != nil {
+				log.Println("[ERR] stmt excution err : ", err)
+			}
+
+			affectedrowscnt, err := result.RowsAffected()
+			if err != nil {
+				log.Println("[ERR] affected rows err : ", err)
+				panic(err)
+			}
+
+			log.Println("[LOG] affected rows count : ", affectedrowscnt)
+		}
+	}
+	return nil
+}
+
+func InsertWithdrawHistory(database *sql.DB) error {
+	var n = 1
+
+	var userid int
+
+	for i := 1; i < 201; i++ {
+
+		cash := 10000 + i
+		if i < 8*n {
+			userid = n + 90
+		} else {
+			n++
+			userid = n + 90
+		}
+
+		stmt, err := database.Prepare(`INSERT IGNORE INTO withdraw_history
+							  (user_id,amount)
+							  VALUES(?,?)`)
+		if err != nil {
+			log.Println("[ERR] prepare statement err : ", err)
+			return err
+		}
+
+		defer stmt.Close()
+
+		result, err := stmt.Exec(userid, cash)
+		if err != nil {
+			log.Println("[ERR] stmt excution err : ", err)
+		}
+
+		affectedrowscnt, err := result.RowsAffected()
+		if err != nil {
+			log.Println("[ERR] affected rows err : ", err)
+			panic(err)
+		}
+
+		log.Println("[LOG] affected rows count : ", affectedrowscnt)
+	}
+
+	return nil
+}

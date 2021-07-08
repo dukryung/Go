@@ -144,26 +144,28 @@ func (m *mariadbHandler) ReadProfileFrameInfo(userid int) (*ResProfileFrameInfo,
 	return resprofileframeinfo, nil
 }
 
-func (m *mariadbHandler) ReadProfileProjectInfo(sessionid string) (*ResProfileProjectInfo, error) {
-	var resprofileprojectinfo *ResProfileProjectInfo
+func (m *mariadbHandler) ReadProfileProjectInfo(userid int) (*ResProfileProjectInfo, error) {
+	var resprofileprojectinfo = &ResProfileProjectInfo{}
 	var project Project
 
 	stmt, err := m.db.Prepare(`SELECT 
-				  p.id, 
-				  p.title,
-				  p.desc,
-				  i.link,
-				  p.created_at,
-				  COUNT(sh.id),
-				  p.comment_count,
-				  p.total_upvote_count,
-				  p.price,
-				  p.beta
-				  FROM user AS u 
-				  INNER JOIN project AS p ON p.user_id = u.id 
-				  INNER JOIN sell_history as sh ON sh.user_id = u.id
-				  INNER JOIN image as i ON i.project_id = p.id
-				  WHERE u.session_id= ?`)
+	p.id, 
+	p.title,
+	p.description,
+	i.link,
+	p.created_at,
+	(SELECT COUNT(id) FROM sell_history WHERE user_id = ?),
+	p.comment_count,
+	p.total_upvote_count,
+	p.price,
+	p.beta
+	FROM user AS u 
+	INNER JOIN project AS p ON p.user_id = u.id 
+	INNER JOIN image AS i ON i.project_id = p.id 
+	INNER JOIN 
+	(SELECT project_id, MAX(created_at) created_at 
+	FROM image GROUP BY project_id) AS ii ON ii.project_id = i.project_id AND i.created_at = ii.created_at 
+	WHERE u.id = ?;`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil, err
@@ -171,7 +173,7 @@ func (m *mariadbHandler) ReadProfileProjectInfo(sessionid string) (*ResProfilePr
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(sessionid)
+	rows, err := stmt.Query(userid, userid)
 	if err != nil {
 		log.Println("[ERR] stmt query err : ", err)
 		return nil, err
@@ -185,6 +187,7 @@ func (m *mariadbHandler) ReadProfileProjectInfo(sessionid string) (*ResProfilePr
 			log.Println("[ERR] stmt query err : ", err)
 			return nil, err
 		}
+		log.Println("@@@@@@@@@@@@@@@@", project)
 		resprofileprojectinfo.ProjectList = append(resprofileprojectinfo.ProjectList, project)
 	}
 

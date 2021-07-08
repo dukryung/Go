@@ -119,7 +119,7 @@ func (p *project) GetProfileHandler(c *gin.Context) {
 		"title": "Profile User Page",
 	})
 }
-func (p *project) GetProfileFramInfoHandler(c *gin.Context) {
+func (p *project) GetProfileFrameInfoHandler(c *gin.Context) {
 	userinfo := &User{}
 
 	err := c.ShouldBindJSON(userinfo)
@@ -139,11 +139,16 @@ func (p *project) GetProfileFramInfoHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resprofileframeinfo)
 }
 func (p *project) GetProfileProjectHandler(c *gin.Context) {
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
+	userinfo := &User{}
 
-	resprofileprojectinfo, err := p.db.ReadProfileProjectInfo(sessionid)
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user idd err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resprofileprojectinfo, err := p.db.ReadProfileProjectInfo(userinfo.ID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile project information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -399,7 +404,7 @@ func MakeHandler(databasename string) *gin.Engine {
 	profileuser := router.Group("/profileuser")
 	{
 		profileuser.GET("/index", CheckSessionValidity, p.GetProfileHandler)
-		profileuser.GET("/frame", CheckSessionValidity, p.GetProfileFramInfoHandler)
+		profileuser.GET("/frame", CheckSessionValidity, p.GetProfileFrameInfoHandler)
 		profileuser.GET("/project", CheckSessionValidity, p.GetProfileProjectHandler)
 		profileuser.GET("/sell", CheckSessionValidity, p.GetProfileSellHandler)
 		profileuser.GET("/buy", CheckSessionValidity, p.GetProfileBuyHandler)

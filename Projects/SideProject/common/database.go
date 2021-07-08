@@ -21,7 +21,7 @@ type DBHandler interface {
 	UpdateModificationUserInfo(string, *ReqJoinInfo) error
 
 	ReadProfileFrameInfo(int) (*ResProfileFrameInfo, error)
-	ReadProfileProjectInfo(string) (*ResProfileProjectInfo, error)
+	ReadProfileProjectInfo(int) (*ResProfileProjectInfo, error)
 	ReadProfileSellInfo(string) (*ResProfileSellInfo, error)
 	ReadProfileBuyInfo(string) (*ResProfileBuyInfo, error)
 	ReadProfileWithdrawInfo(string) (*ResProfileWithdrawInfo, error)
