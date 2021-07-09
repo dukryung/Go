@@ -159,11 +159,15 @@ func (p *project) GetProfileProjectHandler(c *gin.Context) {
 }
 
 func (p *project) GetProfileSellHandler(c *gin.Context) {
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
+	userinfo := &User{}
 
-	resprofilesellinfo, err := p.db.ReadProfileSellInfo(sessionid)
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user idd err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	resprofilesellinfo, err := p.db.ReadProfileSellInfo(userinfo.ID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile sell history information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)

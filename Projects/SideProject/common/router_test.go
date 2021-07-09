@@ -214,3 +214,40 @@ func TestGetProfileProjectHandler(t *testing.T) {
 	assert.Equal(http.StatusOK, res.StatusCode)
 
 }
+
+func TestGetProfileSellHandler(t *testing.T) {
+	var userinfo TestUser
+
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+	userinfo.ID = 111
+
+	data, err := json.Marshal(userinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err : ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/profileuser/sell", buff)
+	if err != nil {
+		log.Println("[ERR] new requesterr : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+
+	sellhistoryinfo, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all err : ", err)
+	}
+
+	log.Println("[LOG] sell history info : ", string(sellhistoryinfo))
+}

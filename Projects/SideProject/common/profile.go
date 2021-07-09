@@ -187,7 +187,7 @@ func (m *mariadbHandler) ReadProfileProjectInfo(userid int) (*ResProfileProjectI
 			log.Println("[ERR] stmt query err : ", err)
 			return nil, err
 		}
-		log.Println("@@@@@@@@@@@@@@@@", project)
+
 		resprofileprojectinfo.ProjectList = append(resprofileprojectinfo.ProjectList, project)
 	}
 
@@ -195,8 +195,8 @@ func (m *mariadbHandler) ReadProfileProjectInfo(userid int) (*ResProfileProjectI
 
 }
 
-func (m *mariadbHandler) ReadProfileSellInfo(sessionid string) (*ResProfileSellInfo, error) {
-	var resprofilesellinfo *ResProfileSellInfo
+func (m *mariadbHandler) ReadProfileSellInfo(userid int) (*ResProfileSellInfo, error) {
+	var resprofilesellinfo = &ResProfileSellInfo{}
 	var sell Sell
 
 	stmt, err := m.db.Prepare(`SELECT 
@@ -205,11 +205,11 @@ func (m *mariadbHandler) ReadProfileSellInfo(sessionid string) (*ResProfileSellI
 				  sh.created_at,
 				  sh.buyer_id,
 				  sh.buyer_nickname,
-				  sh.price,
+				  sh.price
 				  FROM user AS u 
 				  INNER JOIN project AS p ON p.user_id = u.id 
 				  INNER JOIN sell_history as sh ON sh.project_id = p.id
-				  WHERE u.session_id= ?`)
+				  WHERE u.id= ?`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil, err
@@ -217,7 +217,7 @@ func (m *mariadbHandler) ReadProfileSellInfo(sessionid string) (*ResProfileSellI
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(sessionid)
+	rows, err := stmt.Query(userid)
 	if err != nil {
 		log.Println("[ERR] stmt query err : ", err)
 		return nil, err
