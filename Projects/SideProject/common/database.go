@@ -18,15 +18,15 @@ type DBHandler interface {
 	CreateUserInfo(AuthUserInfo) error
 
 	SaveJoinUserInfo(*gin.Context) (string, error)
-	UpdateModificationUserInfo(string, *ReqJoinInfo) error
+	UpdateModificationUserInfo(*ReqModificationUserInfo) error
 
 	ReadProfileFrameInfo(int) (*ResProfileFrameInfo, error)
 	ReadProfileProjectInfo(int) (*ResProfileProjectInfo, error)
 	ReadProfileSellInfo(int) (*ResProfileSellInfo, error)
 	ReadProfileBuyInfo(int) (*ResProfileBuyInfo, error)
-	ReadProfileWithdrawInfo(string) (*ResProfileWithdrawInfo, error)
-	ReadModificationUserInfo(string) (*ResModificationUserInfo, error)
-	ReadProfileArtistInfo(*gin.Context) (*ResArtistInfo, error)
+	ReadProfileWithdrawInfo(int) (*ResProfileWithdrawInfo, error)
+	ReadModificationUserInfo(int) (*ResModificationUserInfo, error)
+	ReadProfileArtistInfo(int) (*ResArtistProfileInfo, error)
 
 	ReadPersonalInformation(string) (*ResPersonalInformation, error)
 	UpdatePersonalInformation(*gin.Context, string) error
@@ -238,7 +238,9 @@ func (p *ProjectDB) NewMariaDBHandler(databasename string) *mariadbHandler {
   		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		user_id BIGINT UNSIGNED,
   		cash  INT,
+		is_remit_req BOOLEAN,
   		created_at TIMESTAMP,
+		request_at TIMESTAMP, 
   		updated_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
   		INDEX idx_user_id (user_id)
@@ -535,7 +537,7 @@ func (m *mariadbHandler) ReadArtistList() (*ResArtistOfTheMonth, error) {
 
 	defer rows.Close()
 
-	var artist ArtistList
+	var artist Artist
 
 	for rows.Next() {
 		rows.Scan(&artist.NickName, &artist.Introduction, &artist.ImageLink, &artist.Rank)

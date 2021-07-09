@@ -73,21 +73,32 @@ type Withdraw struct {
 	Amount        int    `json:"amount"`
 }
 
-type ResModificationUserInfo struct {
+type ReqModificationUserInfo struct {
+	ID                  int    `json:"id"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
 	Email               string `json:"email"`
-	AgreeEmailMarketing string `json:"agree_email_marketing"`
+	AgreeEmailMarketing bool   `json:"agree_email_marketing"`
 	Introduction        string `json:"introduction"`
 	ImageLink           string `json:"image_link"`
 }
 
-type ResArtistInfo struct {
-	ArtistInfo  Artist    `json:"artist"`
-	ProjectList []Project `json:"project"`
+type ResModificationUserInfo struct {
+	ID                  int    `json:"id"`
+	Name                string `json:"name"`
+	Nickname            string `json:"nickname"`
+	Email               string `json:"email"`
+	AgreeEmailMarketing bool   `json:"agree_email_marketing"`
+	Introduction        string `json:"introduction"`
+	ImageLink           string `json:"image_link"`
 }
 
-type Artist struct {
+type ResArtistProfileInfo struct {
+	ArtistInfo  ArtistProfile `json:"artist"`
+	ProjectList []Project     `json:"project"`
+}
+
+type ArtistProfile struct {
 	ArtistID       int    `json:"artist_id"`
 	ArtistNickName string `json:"artist_nickname"`
 	Introduction   string `json:"introduction"`
@@ -282,7 +293,7 @@ func (m *mariadbHandler) ReadProfileBuyInfo(userid int) (*ResProfileBuyInfo, err
 
 }
 
-func (m *mariadbHandler) ReadProfileWithdrawInfo(sessionid string) (*ResProfileWithdrawInfo, error) {
+func (m *mariadbHandler) ReadProfileWithdrawInfo(userid int) (*ResProfileWithdrawInfo, error) {
 	var resprofilewithdrawinfo = &ResProfileWithdrawInfo{}
 	var withdraw Withdraw
 
@@ -293,7 +304,7 @@ func (m *mariadbHandler) ReadProfileWithdrawInfo(sessionid string) (*ResProfileW
 				  wh.amount
 				  FROM user AS u  
 				  INNER JOIN withdraw_history as wh ON wh.user_id = u.id
-				  WHERE u.session_id= ?`)
+				  WHERE u.id= ?`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil, err
@@ -301,7 +312,7 @@ func (m *mariadbHandler) ReadProfileWithdrawInfo(sessionid string) (*ResProfileW
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(sessionid)
+	rows, err := stmt.Query(userid)
 	if err != nil {
 		log.Println("[ERR] stmt query err : ", err)
 		return nil, err
@@ -322,7 +333,7 @@ func (m *mariadbHandler) ReadProfileWithdrawInfo(sessionid string) (*ResProfileW
 
 }
 
-func (m *mariadbHandler) UpdateModificationUserInfo(sessionid string, reqjoininfo *ReqJoinInfo) error {
+func (m *mariadbHandler) UpdateModificationUserInfo(reqmodinfo *ReqModificationUserInfo) error {
 	tx, err := m.db.Begin()
 	if err != nil {
 		log.Println("[ERR] begin err : ", err)
@@ -331,7 +342,7 @@ func (m *mariadbHandler) UpdateModificationUserInfo(sessionid string, reqjoininf
 
 	defer tx.Rollback()
 
-	stmt, err := tx.Prepare(`UPDATE user SET name=?,nickname=?,email=?,agree_email_marketing=? WHERE session_id =?`)
+	stmt, err := tx.Prepare(`UPDATE user SET name=?,nickname=?,email=?,agree_email_marketing=?, introduction = ?, image_link=? WHERE user.id =?`)
 	if err != nil {
 		log.Println("[ERR] Prepare statement err : ", err)
 		return err
@@ -341,7 +352,7 @@ func (m *mariadbHandler) UpdateModificationUserInfo(sessionid string, reqjoininf
 
 	stmt.Exec()
 
-	result, err := stmt.Exec(reqjoininfo.UserInfo.Name, reqjoininfo.UserInfo.Nickname, reqjoininfo.UserInfo.Email, reqjoininfo.UserInfo.AgreeEmailMarketing, sessionid)
+	result, err := stmt.Exec(reqmodinfo.Name, reqmodinfo.Nickname, reqmodinfo.Email, reqmodinfo.AgreeEmailMarketing, reqmodinfo.Introduction, reqmodinfo.ImageLink, reqmodinfo.ID)
 	if err != nil {
 		log.Println("[ERR] Exec err : ", err)
 		return err
@@ -364,8 +375,8 @@ func (m *mariadbHandler) UpdateModificationUserInfo(sessionid string, reqjoininf
 	return nil
 }
 
-func (m *mariadbHandler) ReadModificationUserInfo(sessionid string) (*ResModificationUserInfo, error) {
-	var resmodificationuserinfo *ResModificationUserInfo
+func (m *mariadbHandler) ReadModificationUserInfo(userid int) (*ResModificationUserInfo, error) {
+	var resmodificationuserinfo = &ResModificationUserInfo{}
 
 	stmt, err := m.db.Prepare(`SELECT 
 	name, 
@@ -373,9 +384,9 @@ func (m *mariadbHandler) ReadModificationUserInfo(sessionid string) (*ResModific
 	email,
 	agree_email_marketing,
 	introduction,
-	image_link,
+	image_link
 	FROM user   
-	WHERE u.session_id= ?`)
+	WHERE user.id= ?`)
 
 	if err != nil {
 		log.Println("[ERR] prepare statement err : ", err)
@@ -384,7 +395,7 @@ func (m *mariadbHandler) ReadModificationUserInfo(sessionid string) (*ResModific
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(sessionid)
+	rows, err := stmt.Query(userid)
 	if err != nil {
 		log.Println("[ERR] stmt query err : ", err)
 		return nil, err
@@ -393,51 +404,46 @@ func (m *mariadbHandler) ReadModificationUserInfo(sessionid string) (*ResModific
 	defer rows.Close()
 
 	for rows.Next() {
-		rows.Scan(resmodificationuserinfo.Nickname, resmodificationuserinfo.Nickname, resmodificationuserinfo.Email, resmodificationuserinfo.AgreeEmailMarketing, resmodificationuserinfo.Introduction, resmodificationuserinfo.ImageLink)
+		err = rows.Scan(&resmodificationuserinfo.Name, &resmodificationuserinfo.Nickname, &resmodificationuserinfo.Email, &resmodificationuserinfo.AgreeEmailMarketing, &resmodificationuserinfo.Introduction, &resmodificationuserinfo.ImageLink)
+		if err != nil {
+			log.Println("[ERR] rows scan err : ", err)
+			return nil, err
+		}
 	}
 
 	return resmodificationuserinfo, err
 }
 
-func (m *mariadbHandler) ReadProfileArtistInfo(c *gin.Context) (*ResArtistInfo, error) {
-	var resartistinfo *ResArtistInfo
+func (m *mariadbHandler) ReadProfileArtistInfo(artistid int) (*ResArtistProfileInfo, error) {
+	var resartistinfo = &ResArtistProfileInfo{}
 	var project Project
-	data, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		log.Println("[ERR] read all err : ", err)
-		return nil, err
-	}
-
-	var artistid int
-	err = json.Unmarshal(data, &artistid)
-	if err != nil {
-		log.Println("[ERR] json unmarshal err : ", err)
-		return nil, err
-	}
 
 	stmt, err := m.db.Prepare(`SELECT 
-					u.id,
-					u.nickname,
-					u.introduction,
-					COUNT(p.id),
-					COUNT(sh.id),
-					u.image_link,
-					p.id,
-					p.title,
-					p.description,
-					i.link,
-					p.created_at,
-					p.sell_count,
-					u.id, 
-					p.comment_count,
-					p.total_upvote_count,
-					p.price,
-					p.beta
-					FROM user AS u 
-					INNER JOIN project AS p ON p.user_id = u.id
-					INNER JOIN sell_history AS sh ON sh.user_id = u.id
-					INNER JOIN image AS i ON i.project_id = p.id
-					WHERE u.id = ?`)
+	u.id,
+	u.nickname,
+	u.introduction,
+	(SELECT COUNT(id) FROM project WHERE user_id = ?),
+	(SELECT COUNT(id) FROM sell_history WHERE user_id = ?),
+	u.image_link,
+	p.id,
+	p.title,
+	p.description,
+	i.link,
+	p.created_at,
+	p.sell_count,
+	u.id, 
+	p.comment_count,
+	p.total_upvote_count,
+	p.price,
+	p.beta
+	FROM user AS u 
+	INNER JOIN project AS p ON p.user_id = u.id
+	INNER JOIN image AS i ON i.project_id = p.id
+	INNER JOIN 
+	(SELECT project_id , MIN(created_at) created_at 
+	FROM image GROUP BY project_id) AS ii ON ii.project_id = i.project_id AND ii.created_at = i.created_at
+	WHERE u.id = ? GROUP BY p.id
+`)
 
 	if err != nil {
 		log.Println("[ERR] prepare statement err : ", err)
@@ -446,16 +452,21 @@ func (m *mariadbHandler) ReadProfileArtistInfo(c *gin.Context) (*ResArtistInfo, 
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query()
+	rows, err := stmt.Query(artistid, artistid, artistid)
 	if err != nil {
 		log.Println("[ERR] query err : ", err)
 		return nil, err
 	}
 
 	for rows.Next() {
-		rows.Scan(resartistinfo.ArtistInfo.ArtistID, resartistinfo.ArtistInfo.ArtistNickName, resartistinfo.ArtistInfo.Introduction, resartistinfo.ArtistInfo.ProjectCount, resartistinfo.ArtistInfo.SellCount, resartistinfo.ArtistInfo.ImageLink, project.ID, project.Title, project.Desc, project.ImageLink, project.CreatedAt, project.SellCount, project.UserNickName, project.CommontCount, project.UpvoteCount, project.Price, project.Beta)
+		err = rows.Scan(&resartistinfo.ArtistInfo.ArtistID, &resartistinfo.ArtistInfo.ArtistNickName, &resartistinfo.ArtistInfo.Introduction, &resartistinfo.ArtistInfo.ProjectCount, &resartistinfo.ArtistInfo.SellCount, &resartistinfo.ArtistInfo.ImageLink, &project.ID, &project.Title, &project.Desc, &project.ImageLink, &project.CreatedAt, &project.SellCount, &project.UserNickName, &project.CommontCount, &project.UpvoteCount, &project.Price, &project.Beta)
+		if err != nil {
+			log.Println("[ERR] scan err : ", err)
+			return nil, err
+		}
 
 		resartistinfo.ProjectList = append(resartistinfo.ProjectList, project)
+
 	}
 
 	return resartistinfo, nil

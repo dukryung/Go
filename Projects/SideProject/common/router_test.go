@@ -3,21 +3,24 @@ package common
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"net/textproto"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
+type TestUser struct {
+	ID int `json:"id"`
+}
+type TestArist struct {
+	ArtistID int `json:"artist_id"`
+}
+
+/*
 func TestIndexPathHandler(t *testing.T) {
 	assert := assert.New(t)
 
@@ -142,9 +145,7 @@ func TestPutUserInfoHandler(t *testing.T) {
 
 }
 
-type TestUser struct {
-	ID int `json:"id"`
-}
+
 
 func TestGetProfileFramInfoHandler(t *testing.T) {
 	var userinfo TestUser
@@ -289,5 +290,157 @@ func TestGetProfileBuyHandler(t *testing.T) {
 	}
 
 	log.Println("[LOG] buy history info err : ", string(buyhistoryinfo))
+
+}
+func TestGetProfileWithdrawHandler(t *testing.T) {
+	var userinfo = *&TestUser{}
+
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	userinfo.ID = 111
+
+	data, err := json.Marshal(userinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err: ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/profileuser/withdraw", buff)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+	withdrawhistoryinfo, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all err : ", err)
+	}
+
+	log.Println("[LOG] withdraw history : ", string(withdrawhistoryinfo))
+
+}
+
+
+func TestReadModificationUserInfo(t *testing.T) {
+	var userinfo = &TestUser{}
+
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	userinfo.ID = 111
+
+	data, err := json.Marshal(userinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err: ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/profileuser/modification", buff)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+	withdrawhistoryinfo, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all err : ", err)
+	}
+
+	log.Println("[LOG] withdraw history : ", string(withdrawhistoryinfo))
+
+}
+*/
+
+func TestPutModificationUserInfoHandler(t *testing.T) {
+	var reqmodinfo = &ReqModificationUserInfo{}
+
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	reqmodinfo.ID = 111
+	reqmodinfo.Name = "testname"
+	reqmodinfo.Nickname = "testnickname"
+	reqmodinfo.Email = "test@naver.com"
+	reqmodinfo.AgreeEmailMarketing = true
+	reqmodinfo.Introduction = "testintroduction"
+	reqmodinfo.ImageLink = "test/image"
+
+	data, err := json.Marshal(reqmodinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err: ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodPut, ts.URL+"/profileuser/modification", buff)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+
+}
+func TestGetProfileArtistInfoHandler(t *testing.T) {
+	var artistinfo = &TestArist{}
+
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	artistinfo.ArtistID = 111
+
+	data, err := json.Marshal(artistinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err: ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/profileartist/information", buff)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+	artistprofileinfo, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all err : ", err)
+	}
+
+	log.Println("[LOG] artistprofileinfo history : ", string(artistprofileinfo))
 
 }

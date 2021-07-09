@@ -1,8 +1,6 @@
 package common
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -27,11 +25,11 @@ Logged in with <a href="/auth/naver/signup">naver</a>
 
 //ResArtistOfTheMonth is sturcture to contain response artist information.
 type ResArtistOfTheMonth struct {
-	Artist []ArtistList `json:"artist"`
+	Artist []Artist `json:"artist"`
 }
 
 //ArtistList is structure to get artist list information.
-type ArtistList struct {
+type Artist struct {
 	NickName     string `json:"nickname"`
 	Introduction string `json:"introduction"`
 	ImageLink    string `json:"image_link"`
@@ -163,7 +161,7 @@ func (p *project) GetProfileSellHandler(c *gin.Context) {
 
 	err := c.ShouldBindJSON(userinfo)
 	if err != nil {
-		log.Println("[ERR] failed to extract user idd err : ", err)
+		log.Println("[ERR] failed to extract user id err : ", err)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
@@ -182,7 +180,7 @@ func (p *project) GetProfileBuyHandler(c *gin.Context) {
 
 	err := c.ShouldBindJSON(userinfo)
 	if err != nil {
-		log.Println("[ERR] failed to extract user idd err : ", err)
+		log.Println("[ERR] failed to extract user id err : ", err)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
@@ -198,11 +196,15 @@ func (p *project) GetProfileBuyHandler(c *gin.Context) {
 }
 
 func (p *project) GetProfileWithdrawHandler(c *gin.Context) {
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
+	var userinfo = &User{}
 
-	resprofilebuyinfo, err := p.db.ReadProfileWithdrawInfo(sessionid)
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	resprofilebuyinfo, err := p.db.ReadProfileWithdrawInfo(userinfo.ID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile withdraw history information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -215,11 +217,14 @@ func (p *project) GetProfileWithdrawHandler(c *gin.Context) {
 //GetModificationUserInfoHandler is function to get user profile infomation.
 func (p *project) GetModificationUserInfoHandler(c *gin.Context) {
 
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
-
-	resmodificationuserinfo, err := p.db.ReadModificationUserInfo(sessionid)
+	var userinfo = &User{}
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	resmodificationuserinfo, err := p.db.ReadModificationUserInfo(userinfo.ID)
 	if err != nil {
 		log.Println("[ERR] failed to read modification user info err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -228,29 +233,17 @@ func (p *project) GetModificationUserInfoHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resmodificationuserinfo)
 }
 
-//PutProfileEditHandler is fuction to edit user profile information.
+//PutModificationUserInfoHandler is fuction to edit user profile information.
 func (p *project) PutModificationUserInfoHandler(c *gin.Context) {
-	var reqjoininfo *ReqJoinInfo
-
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
-
-	data, err := ioutil.ReadAll(c.Request.Body)
+	var reqmodinfo = &ReqModificationUserInfo{}
+	err := c.ShouldBindJSON(reqmodinfo)
 	if err != nil {
-		log.Println("[ERR] ioutil readall err : ", err)
-		c.JSON(http.StatusInternalServerError, nil)
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 
-	err = json.Unmarshal(data, reqjoininfo)
-	if err != nil {
-		log.Println("[ERR] json unmarshal err : ", err)
-		c.JSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	err = p.db.UpdateModificationUserInfo(sessionid, reqjoininfo)
+	err = p.db.UpdateModificationUserInfo(reqmodinfo)
 	if err != nil {
 		log.Println("[ERR] update user info ")
 		c.JSON(http.StatusInternalServerError, nil)
@@ -266,7 +259,15 @@ func (p *project) GetProfileArtistHandler(c *gin.Context) {
 }
 
 func (p *project) GetProfileArtistInfoHandler(c *gin.Context) {
-	resartistinfo, err := p.db.ReadProfileArtistInfo(c)
+	var artistprofileinfo = &ArtistProfile{}
+	err := c.ShouldBindJSON(artistprofileinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resartistinfo, err := p.db.ReadProfileArtistInfo(artistprofileinfo.ArtistID)
 	if err != nil {
 		log.Println("[ERR] failed to read artist information err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
