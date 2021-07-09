@@ -163,9 +163,9 @@ func (m *mariadbHandler) ReadProfileProjectInfo(userid int) (*ResProfileProjectI
 	INNER JOIN project AS p ON p.user_id = u.id 
 	INNER JOIN image AS i ON i.project_id = p.id 
 	INNER JOIN 
-	(SELECT project_id, MAX(created_at) created_at 
+	(SELECT project_id, MIN(created_at) created_at 
 	FROM image GROUP BY project_id) AS ii ON ii.project_id = i.project_id AND i.created_at = ii.created_at 
-	WHERE u.id = ?;`)
+	WHERE u.id = ? GROUP BY p.id;`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil, err
