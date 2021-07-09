@@ -23,7 +23,7 @@ type DBHandler interface {
 	ReadProfileFrameInfo(int) (*ResProfileFrameInfo, error)
 	ReadProfileProjectInfo(int) (*ResProfileProjectInfo, error)
 	ReadProfileSellInfo(int) (*ResProfileSellInfo, error)
-	ReadProfileBuyInfo(string) (*ResProfileBuyInfo, error)
+	ReadProfileBuyInfo(int) (*ResProfileBuyInfo, error)
 	ReadProfileWithdrawInfo(string) (*ResProfileWithdrawInfo, error)
 	ReadModificationUserInfo(string) (*ResModificationUserInfo, error)
 	ReadProfileArtistInfo(*gin.Context) (*ResArtistInfo, error)

@@ -220,7 +220,7 @@ func TestGetProfileSellHandler(t *testing.T) {
 
 	assert := assert.New(t)
 	ts := httptest.NewServer(MakeHandler("sideproject"))
-	client := http.Client{
+	client := &http.Client{
 		Timeout: time.Second * 10,
 	}
 	userinfo.ID = 111
@@ -250,4 +250,44 @@ func TestGetProfileSellHandler(t *testing.T) {
 	}
 
 	log.Println("[LOG] sell history info : ", string(sellhistoryinfo))
+}
+
+func TestGetProfileBuyHandler(t *testing.T) {
+	var userinfo TestUser
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	userinfo.ID = 111
+
+	data, err := json.Marshal(userinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err : ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/profileuser/buy", buff)
+	if err != nil {
+		log.Println("[ERR] request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client Do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+
+	buyhistoryinfo, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all err : ", err)
+
+	}
+
+	log.Println("[LOG] buy history info err : ", string(buyhistoryinfo))
+
 }

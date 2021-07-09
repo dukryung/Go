@@ -199,17 +199,18 @@ func (m *mariadbHandler) ReadProfileSellInfo(userid int) (*ResProfileSellInfo, e
 	var resprofilesellinfo = &ResProfileSellInfo{}
 	var sell Sell
 
-	stmt, err := m.db.Prepare(`SELECT 
-				  p.id, 
-				  p.title,
-				  sh.created_at,
-				  sh.buyer_id,
-				  sh.buyer_nickname,
-				  sh.price
-				  FROM user AS u 
-				  INNER JOIN project AS p ON p.user_id = u.id 
-				  INNER JOIN sell_history as sh ON sh.project_id = p.id
-				  WHERE u.id= ?`)
+	stmt, err := m.db.Prepare(`  SELECT 
+							p.id, 
+							p.title,
+							sh.created_at,
+							sh.buyer_id,
+							sh.buyer_nickname,
+							sh.price
+							FROM user AS u
+							INNER JOIN sell_history as sh ON sh.user_id = u.id 
+							INNER JOIN project AS p ON p.id = sh.project_id 
+							WHERE u.id= ?;
+	`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil, err
@@ -238,21 +239,21 @@ func (m *mariadbHandler) ReadProfileSellInfo(userid int) (*ResProfileSellInfo, e
 
 }
 
-func (m *mariadbHandler) ReadProfileBuyInfo(sessionid string) (*ResProfileBuyInfo, error) {
-	var resprofilebuyinfo *ResProfileBuyInfo
+func (m *mariadbHandler) ReadProfileBuyInfo(userid int) (*ResProfileBuyInfo, error) {
+	var resprofilebuyinfo = &ResProfileBuyInfo{}
 	var buy Buy
 
 	stmt, err := m.db.Prepare(`SELECT 
-				  p.id, 
-				  p.title,
-				  bh.created_at,
-				  bh.seller_id,
-				  bh.selller_nickname,
-				  bh.price
-				  FROM user AS u 
-				  INNER JOIN project AS p ON p.user_id = u.id 
-				  INNER JOIN buy_history as bh ON bh.project_id = p.id
-				  WHERE u.session_id= ?`)
+						p.id, 
+						p.title,
+						bh.created_at,
+						bh.seller_id,
+						bh.seller_nickname,
+						bh.price
+						FROM user AS u 
+						INNER JOIN buy_history as bh ON bh.user_id = u.id
+						INNER JOIN project AS p ON p.id = bh.project_id
+						WHERE u.id = ?`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil, err
@@ -260,7 +261,7 @@ func (m *mariadbHandler) ReadProfileBuyInfo(sessionid string) (*ResProfileBuyInf
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(sessionid)
+	rows, err := stmt.Query(userid)
 	if err != nil {
 		log.Println("[ERR] stmt query err : ", err)
 		return nil, err
@@ -282,7 +283,7 @@ func (m *mariadbHandler) ReadProfileBuyInfo(sessionid string) (*ResProfileBuyInf
 }
 
 func (m *mariadbHandler) ReadProfileWithdrawInfo(sessionid string) (*ResProfileWithdrawInfo, error) {
-	var resprofilewithdrawinfo *ResProfileWithdrawInfo
+	var resprofilewithdrawinfo = &ResProfileWithdrawInfo{}
 	var withdraw Withdraw
 
 	stmt, err := m.db.Prepare(`SELECT 
