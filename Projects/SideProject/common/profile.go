@@ -472,15 +472,15 @@ func (m *mariadbHandler) ReadProfileArtistInfo(artistid int) (*ResArtistProfileI
 	return resartistinfo, nil
 }
 
-func (m *mariadbHandler) ReadPersonalInformation(sessionid string) (*ResPersonalInformation, error) {
-	var respersonalinformation *ResPersonalInformation
+func (m *mariadbHandler) ReadPersonalInformation(userid int) (*ResPersonalInformation, error) {
+	var respersonalinformation = &ResPersonalInformation{}
 
 	stmt, err := m.db.Prepare(`SELECT 
 	bank, 
 	account,
 	agree_policy
 	FROM user  
-	WHERE u.session_id= ?`)
+	WHERE user.id= ?`)
 
 	if err != nil {
 		log.Println("[ERR] prepare statement err : ", err)
@@ -489,7 +489,7 @@ func (m *mariadbHandler) ReadPersonalInformation(sessionid string) (*ResPersonal
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(sessionid)
+	rows, err := stmt.Query(userid)
 	if err != nil {
 		log.Println("[ERR] stmt query err : ", err)
 		return nil, err
@@ -498,7 +498,11 @@ func (m *mariadbHandler) ReadPersonalInformation(sessionid string) (*ResPersonal
 	defer rows.Close()
 
 	for rows.Next() {
-		rows.Scan(respersonalinformation.Account.Bank, respersonalinformation.Account.Account, respersonalinformation.Account.AgreePolicy)
+		err = rows.Scan(&respersonalinformation.Account.Bank, &respersonalinformation.Account.Account, &respersonalinformation.Account.AgreePolicy)
+		if err != nil {
+			log.Println("[ERR] rows scan err : ", err)
+			return nil, err
+		}
 	}
 
 	return respersonalinformation, err

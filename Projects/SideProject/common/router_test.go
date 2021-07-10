@@ -368,7 +368,6 @@ func TestReadModificationUserInfo(t *testing.T) {
 	log.Println("[LOG] withdraw history : ", string(withdrawhistoryinfo))
 
 }
-*/
 
 func TestPutModificationUserInfoHandler(t *testing.T) {
 	var reqmodinfo = &ReqModificationUserInfo{}
@@ -407,6 +406,7 @@ func TestPutModificationUserInfoHandler(t *testing.T) {
 	assert.Equal(http.StatusOK, res.StatusCode)
 
 }
+
 func TestGetProfileArtistInfoHandler(t *testing.T) {
 	var artistinfo = &TestArist{}
 
@@ -442,5 +442,44 @@ func TestGetProfileArtistInfoHandler(t *testing.T) {
 	}
 
 	log.Println("[LOG] artistprofileinfo history : ", string(artistprofileinfo))
+
+}
+*/
+
+func TestGetPersonalInformationHandler(t *testing.T) {
+	var userinfo = &TestUser{}
+
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	userinfo.ID = 111
+
+	data, err := json.Marshal(userinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err: ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/personal/information", buff)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+	personalinfo, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all err : ", err)
+	}
+
+	log.Println("[LOG] personalinfo history : ", string(personalinfo))
 
 }

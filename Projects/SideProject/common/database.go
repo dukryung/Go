@@ -28,7 +28,7 @@ type DBHandler interface {
 	ReadModificationUserInfo(int) (*ResModificationUserInfo, error)
 	ReadProfileArtistInfo(int) (*ResArtistProfileInfo, error)
 
-	ReadPersonalInformation(string) (*ResPersonalInformation, error)
+	ReadPersonalInformation(int) (*ResPersonalInformation, error)
 	UpdatePersonalInformation(*gin.Context, string) error
 
 	ReadProjectDetailArtistProjectInfo(*gin.Context) (*ResProjectDetailInfo, error)

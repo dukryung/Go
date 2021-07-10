@@ -283,11 +283,15 @@ func (p *project) GetPersonalIndexHandler(c *gin.Context) {
 	})
 }
 func (p *project) GetPersonalInformationHandler(c *gin.Context) {
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
+	var userinfo = &User{}
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
 
-	respersonalinfomation, err := p.db.ReadPersonalInformation(sessionid)
+	respersonalinfomation, err := p.db.ReadPersonalInformation(userinfo.ID)
 	if err != nil {
 		log.Println("[ERR] failed to read personal information err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
