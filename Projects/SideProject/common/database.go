@@ -13,23 +13,23 @@ import (
 type DBHandler interface {
 	ReadProjectList(*ReqProjectsOfTheDay) (*ResProjectsOfTheDay, error)
 	ReadArtistList() (*ResArtistOfTheMonth, error)
-	ReadUserInfo(string) *ResUserInfo
+	ReadUserInfo(int64) *ResUserInfo
 	ReadUserID(string) (*int, error)
 	CreateUserInfo(AuthUserInfo) error
 
 	SaveJoinUserInfo(*gin.Context) (string, error)
 	UpdateModificationUserInfo(*ReqModificationUserInfo) error
 
-	ReadProfileFrameInfo(int) (*ResProfileFrameInfo, error)
-	ReadProfileProjectInfo(int) (*ResProfileProjectInfo, error)
-	ReadProfileSellInfo(int) (*ResProfileSellInfo, error)
-	ReadProfileBuyInfo(int) (*ResProfileBuyInfo, error)
-	ReadProfileWithdrawInfo(int) (*ResProfileWithdrawInfo, error)
-	ReadModificationUserInfo(int) (*ResModificationUserInfo, error)
-	ReadProfileArtistInfo(int) (*ResArtistProfileInfo, error)
+	ReadProfileFrameInfo(int64) (*ResProfileFrameInfo, error)
+	ReadProfileProjectInfo(int64) (*ResProfileProjectInfo, error)
+	ReadProfileSellInfo(int64) (*ResProfileSellInfo, error)
+	ReadProfileBuyInfo(int64) (*ResProfileBuyInfo, error)
+	ReadProfileWithdrawInfo(int64) (*ResProfileWithdrawInfo, error)
+	ReadModificationUserInfo(int64) (*ResModificationUserInfo, error)
+	ReadProfileArtistInfo(int64) (*ResArtistProfileInfo, error)
 
-	ReadPersonalInformation(int) (*ResPersonalInformation, error)
-	UpdatePersonalInformation(*gin.Context, string) error
+	ReadPersonalInformation(int64) (*ResPersonalInformation, error)
+	UpdatePersonalInformation(*ReqPersonalInformation) error
 
 	ReadProjectDetailArtistProjectInfo(*gin.Context) (*ResProjectDetailInfo, error)
 	ReadProjectDetailArtistProjectImagesInfo(*gin.Context) (*ResProjectDetailInfo, error)

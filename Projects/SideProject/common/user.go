@@ -15,7 +15,7 @@ import (
 )
 
 type User struct {
-	ID                  int    `json:"id" binding:"required"`
+	ID                  int64  `json:"id" binding:"required"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
 	Email               string `json:"email"`
@@ -24,7 +24,7 @@ type User struct {
 }
 
 type Account struct {
-	UserID      string `json:"user_id"`
+	UserID      int64  `json:"user_id"`
 	Bank        int    `json:"bank"`
 	Account     string `json:"account"`
 	AgreePolicy bool   `json:"agree_policy"`
@@ -39,13 +39,13 @@ type ArgsUpdateJoinUserInfo struct {
 }
 
 //ReadUserInfo is fuction to read user information.
-func (m *mariadbHandler) ReadUserInfo(sessionid string) *ResUserInfo {
+func (m *mariadbHandler) ReadUserInfo(userid int64) *ResUserInfo {
 	var resuser *ResUserInfo
 
 	resuser = &ResUserInfo{}
 
 	stmt, err := m.db.Prepare(`SELECT id, nickname
-				  FROM user WHERE session_id = ?`)
+				  FROM user WHERE user.id = ?`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil
@@ -53,7 +53,7 @@ func (m *mariadbHandler) ReadUserInfo(sessionid string) *ResUserInfo {
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(sessionid)
+	rows, err := stmt.Query(userid)
 	if err != nil {
 		log.Println("[ERR] stmt query err : ", err)
 		return nil

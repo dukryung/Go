@@ -91,11 +91,16 @@ func (p *project) GetArtistInfoHandler(c *gin.Context) {
 
 func (p *project) GetUserInfoHandler(c *gin.Context) {
 
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
+	userinfo := &User{}
 
-	resuser := p.db.ReadUserInfo(sessionid)
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user idd err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resuser := p.db.ReadUserInfo(userinfo.ID)
 	c.JSON(http.StatusOK, resuser)
 }
 
@@ -302,11 +307,15 @@ func (p *project) GetPersonalInformationHandler(c *gin.Context) {
 }
 
 func (p *project) PutPersonalInformationHandler(c *gin.Context) {
-	session, _ := store.Get(c.Request, "session")
-	val := session.Values["id"]
-	sessionid := val.(string)
+	var reqpersonalinformation = &ReqPersonalInformation{}
+	err := c.ShouldBindJSON(reqpersonalinformation)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
 
-	err := p.db.UpdatePersonalInformation(c, sessionid)
+	err = p.db.UpdatePersonalInformation(reqpersonalinformation)
 	if err != nil {
 		log.Println("[ERR] failed to update personal information err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)

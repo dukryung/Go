@@ -158,7 +158,7 @@ func SaveUserImgFile(args ArgsUpdateJoinUserInfo) (string, error) {
 }
 
 //DeleteUserImgFile is function to check thage the user image folder exists in storage.
-func DeleteUserImgFile(ctx context.Context, userid int, database *sql.DB) error {
+func DeleteUserImgFile(ctx context.Context, userid int64, database *sql.DB) error {
 
 	var userimglink string
 	stmt, err := database.Prepare(`SELECT image_link FROM user WHERE id = ?`)

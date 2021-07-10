@@ -1,15 +1,11 @@
 package common
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"log"
-
-	"github.com/gin-gonic/gin"
 )
 
 type ResProfileFrameInfo struct {
-	UserID           int    `json:"user_id"`
+	UserID           int64  `json:"user_id"`
 	UserNickName     string `json:"user_nickname"`
 	UserIntroduction string `json:"user_introduction"`
 	CreatedAt        string `json:"created_at"`
@@ -24,7 +20,7 @@ type ResProfileProjectInfo struct {
 }
 
 type Project struct {
-	ID           int    `json:"id"`
+	ID           int64  `json:"id"`
 	Title        string `json:"title"`
 	Desc         string `json:"desc"`
 	ImageLink    string `json:"image_link"`
@@ -42,7 +38,7 @@ type ResProfileSellInfo struct {
 }
 
 type Sell struct {
-	ID            int    `json:"id"`
+	ID            int64  `json:"id"`
 	Title         string `json:"title"`
 	Date          string `json:"date"`
 	BuyerID       int    `json:"buyer_id"`
@@ -55,7 +51,7 @@ type ResProfileBuyInfo struct {
 }
 
 type Buy struct {
-	ID             int    `json:"id"`
+	ID             int64  `json:"id"`
 	Title          string `json:"title"`
 	Date           string `json:"date"`
 	SellerID       int    `json:"selller_id"`
@@ -67,14 +63,14 @@ type ResProfileWithdrawInfo struct {
 	WithdrawList []Withdraw `json:"withdraw"`
 }
 type Withdraw struct {
-	ID            int    `json:"id"`
+	ID            int64  `json:"id"`
 	RequestedDate string `json:"requested_date"`
 	CompleteDate  string `json:"complete_date"`
 	Amount        int    `json:"amount"`
 }
 
 type ReqModificationUserInfo struct {
-	ID                  int    `json:"id"`
+	ID                  int64  `json:"id"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
 	Email               string `json:"email"`
@@ -84,7 +80,7 @@ type ReqModificationUserInfo struct {
 }
 
 type ResModificationUserInfo struct {
-	ID                  int    `json:"id"`
+	ID                  int64  `json:"id"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
 	Email               string `json:"email"`
@@ -99,7 +95,7 @@ type ResArtistProfileInfo struct {
 }
 
 type ArtistProfile struct {
-	ArtistID       int    `json:"artist_id"`
+	ArtistID       int64  `json:"artist_id"`
 	ArtistNickName string `json:"artist_nickname"`
 	Introduction   string `json:"introduction"`
 	ProjectCount   int    `json:"project_cnt"`
@@ -114,7 +110,7 @@ type ReqPersonalInformation struct {
 	Account Account `json:"account"`
 }
 
-func (m *mariadbHandler) ReadProfileFrameInfo(userid int) (*ResProfileFrameInfo, error) {
+func (m *mariadbHandler) ReadProfileFrameInfo(userid int64) (*ResProfileFrameInfo, error) {
 
 	var resprofileframeinfo = &ResProfileFrameInfo{}
 
@@ -155,7 +151,7 @@ func (m *mariadbHandler) ReadProfileFrameInfo(userid int) (*ResProfileFrameInfo,
 	return resprofileframeinfo, nil
 }
 
-func (m *mariadbHandler) ReadProfileProjectInfo(userid int) (*ResProfileProjectInfo, error) {
+func (m *mariadbHandler) ReadProfileProjectInfo(userid int64) (*ResProfileProjectInfo, error) {
 	var resprofileprojectinfo = &ResProfileProjectInfo{}
 	var project Project
 
@@ -206,7 +202,7 @@ func (m *mariadbHandler) ReadProfileProjectInfo(userid int) (*ResProfileProjectI
 
 }
 
-func (m *mariadbHandler) ReadProfileSellInfo(userid int) (*ResProfileSellInfo, error) {
+func (m *mariadbHandler) ReadProfileSellInfo(userid int64) (*ResProfileSellInfo, error) {
 	var resprofilesellinfo = &ResProfileSellInfo{}
 	var sell Sell
 
@@ -250,7 +246,7 @@ func (m *mariadbHandler) ReadProfileSellInfo(userid int) (*ResProfileSellInfo, e
 
 }
 
-func (m *mariadbHandler) ReadProfileBuyInfo(userid int) (*ResProfileBuyInfo, error) {
+func (m *mariadbHandler) ReadProfileBuyInfo(userid int64) (*ResProfileBuyInfo, error) {
 	var resprofilebuyinfo = &ResProfileBuyInfo{}
 	var buy Buy
 
@@ -293,7 +289,7 @@ func (m *mariadbHandler) ReadProfileBuyInfo(userid int) (*ResProfileBuyInfo, err
 
 }
 
-func (m *mariadbHandler) ReadProfileWithdrawInfo(userid int) (*ResProfileWithdrawInfo, error) {
+func (m *mariadbHandler) ReadProfileWithdrawInfo(userid int64) (*ResProfileWithdrawInfo, error) {
 	var resprofilewithdrawinfo = &ResProfileWithdrawInfo{}
 	var withdraw Withdraw
 
@@ -375,7 +371,7 @@ func (m *mariadbHandler) UpdateModificationUserInfo(reqmodinfo *ReqModificationU
 	return nil
 }
 
-func (m *mariadbHandler) ReadModificationUserInfo(userid int) (*ResModificationUserInfo, error) {
+func (m *mariadbHandler) ReadModificationUserInfo(userid int64) (*ResModificationUserInfo, error) {
 	var resmodificationuserinfo = &ResModificationUserInfo{}
 
 	stmt, err := m.db.Prepare(`SELECT 
@@ -414,7 +410,7 @@ func (m *mariadbHandler) ReadModificationUserInfo(userid int) (*ResModificationU
 	return resmodificationuserinfo, err
 }
 
-func (m *mariadbHandler) ReadProfileArtistInfo(artistid int) (*ResArtistProfileInfo, error) {
+func (m *mariadbHandler) ReadProfileArtistInfo(artistid int64) (*ResArtistProfileInfo, error) {
 	var resartistinfo = &ResArtistProfileInfo{}
 	var project Project
 
@@ -472,7 +468,7 @@ func (m *mariadbHandler) ReadProfileArtistInfo(artistid int) (*ResArtistProfileI
 	return resartistinfo, nil
 }
 
-func (m *mariadbHandler) ReadPersonalInformation(userid int) (*ResPersonalInformation, error) {
+func (m *mariadbHandler) ReadPersonalInformation(userid int64) (*ResPersonalInformation, error) {
 	var respersonalinformation = &ResPersonalInformation{}
 
 	stmt, err := m.db.Prepare(`SELECT 
@@ -509,21 +505,7 @@ func (m *mariadbHandler) ReadPersonalInformation(userid int) (*ResPersonalInform
 
 }
 
-func (m *mariadbHandler) UpdatePersonalInformation(c *gin.Context, sessionid string) error {
-
-	var reqpersonalinformation *ReqPersonalInformation
-
-	data, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		log.Println("[ERR] read all err : ", err)
-		return err
-	}
-
-	err = json.Unmarshal(data, reqpersonalinformation)
-	if err != nil {
-		log.Println("ERR] json unmarshal err : ", err)
-		return err
-	}
+func (m *mariadbHandler) UpdatePersonalInformation(reqpersonalinformation *ReqPersonalInformation) error {
 
 	tx, err := m.db.Begin()
 	if err != nil {
@@ -539,7 +521,7 @@ func (m *mariadbHandler) UpdatePersonalInformation(c *gin.Context, sessionid str
 				account = ?,
 				agree_policy = ? ,
 				updated_at = NOW()
-				WHERE sessionid = ?`)
+				WHERE user.id = ?`)
 	if err != nil {
 		log.Println("[ERR] prepare statement err : ", err)
 		return err
@@ -547,7 +529,7 @@ func (m *mariadbHandler) UpdatePersonalInformation(c *gin.Context, sessionid str
 
 	defer stmt.Close()
 
-	result, err := stmt.Exec(reqpersonalinformation.Account.Bank, reqpersonalinformation.Account.Account, reqpersonalinformation.Account.AgreePolicy, sessionid)
+	result, err := stmt.Exec(reqpersonalinformation.Account.Bank, reqpersonalinformation.Account.Account, reqpersonalinformation.Account.AgreePolicy, reqpersonalinformation.Account.UserID)
 	if err != nil {
 		log.Println("[ERR] statment execution err : ", err)
 		return err

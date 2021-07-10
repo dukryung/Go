@@ -483,3 +483,35 @@ func TestGetPersonalInformationHandler(t *testing.T) {
 	log.Println("[LOG] personalinfo history : ", string(personalinfo))
 
 }
+func TestPutPersonalInformationHandler(t *testing.T) {
+	var reqpersonalinformation = &ReqPersonalInformation{}
+
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	reqpersonalinformation.Account.UserID = 111
+	reqpersonalinformation.Account.Bank = 1
+	reqpersonalinformation.Account.Account = "1111-111-1111-11111"
+
+	data, err := json.Marshal(reqpersonalinformation)
+	if err != nil {
+		log.Println("[ERR] json marshal err: ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodPut, ts.URL+"/personal/information", buff)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+}
