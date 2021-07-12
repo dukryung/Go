@@ -80,7 +80,7 @@ type ReqProjectsOfTheDay struct {
 //ResProjectsOfTheDay is structure to contain response information.
 type ResProjectsOfTheDay struct {
 	Date           time.Time     `json:"date"`
-	Project        []ProjectList `json:"project"`
+	Project        []ProjectList `json:"project_list"`
 	Total          string        `json:"total"`
 	Period         int           `json:"period"`
 	RankLastNumber string        `json:"rank_last_number"`
@@ -88,7 +88,7 @@ type ResProjectsOfTheDay struct {
 
 //ProjectList is structure to get project list information.
 type ProjectList struct {
-	ID            string `json:"id"`
+	ID            int64  `json:"project_id"`
 	Title         string `json:"title"`
 	CategoryCode  string `json:"category_id"`
 	Description   string `json:"desc"`
@@ -103,22 +103,9 @@ type ProjectList struct {
 	Rank          string `json:"rank"`
 }
 
-func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(c *gin.Context) (*ResProjectDetailInfo, error) {
+func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(reqprojectdetailinfo *ReqProjectDetailInfo) (*ResProjectDetailInfo, error) {
 
-	var reqprojectdetailinfo *ReqProjectDetailInfo
 	var resprojectdetailinfo *ResProjectDetailInfo
-
-	data, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		log.Println("[ERR] read all err : ", err)
-		return nil, err
-	}
-
-	err = json.Unmarshal(data, reqprojectdetailinfo)
-	if err != nil {
-		log.Println("[ERR] json unmarshal err : ", err)
-		return nil, err
-	}
 
 	// -------{TODO : delete rank column and test query  in database's table.}
 	stmt, err := m.db.Prepare(`SELECT 
@@ -136,7 +123,7 @@ func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(c *gin.Context) (*Re
 				  FROM user AS u INNER JOIN project AS p ON p.user_id = u.id
 				  INNER JOIN project_rank AS pr ON pr.project_id = p.id
 				  INNER JOIN upvote_status AS us ON us.user_id = u.id
-				  INNER JOIN buy_history AS bh ON bh.user_id = u.id
+				  INNER JOIN buy_history AS bh ON bh.user_id = u.id 
 				  WHERE u.id = ? AND p.id = ?`)
 
 	if err != nil {
