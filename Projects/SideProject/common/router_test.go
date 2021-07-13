@@ -14,7 +14,7 @@ import (
 )
 
 type TestUser struct {
-	ID int `json:"id"`
+	ID int `json:"user_id"`
 }
 type TestArist struct {
 	ArtistID int `json:"artist_id"`
@@ -444,7 +444,6 @@ func TestGetProfileArtistInfoHandler(t *testing.T) {
 	log.Println("[LOG] artistprofileinfo history : ", string(artistprofileinfo))
 
 }
-*/
 
 func TestGetPersonalInformationHandler(t *testing.T) {
 	var userinfo = &TestUser{}
@@ -514,4 +513,44 @@ func TestPutPersonalInformationHandler(t *testing.T) {
 	}
 
 	assert.Equal(http.StatusOK, res.StatusCode)
+}
+
+*/
+
+func TestGetProjectDetailProjectInformationHandler(t *testing.T) {
+	var reqprojectdetailinfo = &ReqProjectDetailInfo{}
+	assert := assert.New(t)
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	reqprojectdetailinfo.UserID = 111
+	reqprojectdetailinfo.ProjectID = 551
+
+	data, err := json.Marshal(reqprojectdetailinfo)
+	if err != nil {
+		log.Println("[ERR] json marshal err: ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/project/information/detail/project", buff)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+	resprojectdetailinfo, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all err : ", err)
+	}
+
+	log.Println("[LOG] personalinfo history : ", string(resprojectdetailinfo))
+
 }

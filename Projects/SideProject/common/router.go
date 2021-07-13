@@ -25,11 +25,12 @@ Logged in with <a href="/auth/naver/signup">naver</a>
 
 //ResArtistOfTheMonth is sturcture to contain response artist information.
 type ResArtistOfTheMonth struct {
-	Artist []Artist `json:"artist"`
+	Artist []Artist `json:"artist_list"`
 }
 
 //ArtistList is structure to get artist list information.
 type Artist struct {
+	ArtistID     int64  `json:"artist_id"`
 	NickName     string `json:"nickname"`
 	Introduction string `json:"introduction"`
 	ImageLink    string `json:"image_link"`
@@ -68,8 +69,8 @@ func (p *project) GetProjectInfoHandler(c *gin.Context) {
 	}
 
 	respod, err := p.db.ReadProjectList(reqpod)
-	if respod == nil {
-		log.Println("[ERR] empty project list")
+	if err != nil {
+		log.Println("[ERR] failed to read project list err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
 		return
 	}
@@ -100,7 +101,7 @@ func (p *project) GetUserInfoHandler(c *gin.Context) {
 		return
 	}
 
-	resuser := p.db.ReadUserInfo(userinfo.ID)
+	resuser := p.db.ReadUserInfo(userinfo.UserID)
 	c.JSON(http.StatusOK, resuser)
 }
 
@@ -132,7 +133,7 @@ func (p *project) GetProfileFrameInfoHandler(c *gin.Context) {
 		return
 	}
 
-	resprofileframeinfo, err := p.db.ReadProfileFrameInfo(userinfo.ID)
+	resprofileframeinfo, err := p.db.ReadProfileFrameInfo(userinfo.UserID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile frame information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -151,7 +152,7 @@ func (p *project) GetProfileProjectHandler(c *gin.Context) {
 		return
 	}
 
-	resprofileprojectinfo, err := p.db.ReadProfileProjectInfo(userinfo.ID)
+	resprofileprojectinfo, err := p.db.ReadProfileProjectInfo(userinfo.UserID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile project information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -170,7 +171,7 @@ func (p *project) GetProfileSellHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
-	resprofilesellinfo, err := p.db.ReadProfileSellInfo(userinfo.ID)
+	resprofilesellinfo, err := p.db.ReadProfileSellInfo(userinfo.UserID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile sell history information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -190,7 +191,7 @@ func (p *project) GetProfileBuyHandler(c *gin.Context) {
 		return
 	}
 
-	resprofilebuyinfo, err := p.db.ReadProfileBuyInfo(userinfo.ID)
+	resprofilebuyinfo, err := p.db.ReadProfileBuyInfo(userinfo.UserID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile buy history information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -209,7 +210,7 @@ func (p *project) GetProfileWithdrawHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
-	resprofilebuyinfo, err := p.db.ReadProfileWithdrawInfo(userinfo.ID)
+	resprofilebuyinfo, err := p.db.ReadProfileWithdrawInfo(userinfo.UserID)
 	if err != nil {
 		log.Println("[ERR] failed to read profile withdraw history information err :", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -229,7 +230,7 @@ func (p *project) GetModificationUserInfoHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
-	resmodificationuserinfo, err := p.db.ReadModificationUserInfo(userinfo.ID)
+	resmodificationuserinfo, err := p.db.ReadModificationUserInfo(userinfo.UserID)
 	if err != nil {
 		log.Println("[ERR] failed to read modification user info err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -296,7 +297,7 @@ func (p *project) GetPersonalInformationHandler(c *gin.Context) {
 		return
 	}
 
-	respersonalinfomation, err := p.db.ReadPersonalInformation(userinfo.ID)
+	respersonalinfomation, err := p.db.ReadPersonalInformation(userinfo.UserID)
 	if err != nil {
 		log.Println("[ERR] failed to read personal information err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -326,8 +327,15 @@ func (p *project) PutPersonalInformationHandler(c *gin.Context) {
 }
 
 func (p *project) GetProjectDetailProjectInformationHandler(c *gin.Context) {
+	var reqprojectdetailinfo = &ReqProjectDetailInfo{}
+	err := c.ShouldBindJSON(reqprojectdetailinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
 
-	resprojectdetail, err := p.db.ReadProjectDetailArtistProjectInfo(c)
+	resprojectdetail, err := p.db.ReadProjectDetailArtistProjectInfo(reqprojectdetailinfo)
 	if err != nil {
 		log.Println("[ERR] failed to read project detail information err : ", err)
 		c.JSON(http.StatusInternalServerError, nil)
@@ -439,8 +447,11 @@ func MakeHandler(databasename string) *gin.Engine {
 
 	profileartist := router.Group("/profileartist")
 	{
+
 		profileartist.GET("/index", CheckSessionValidity, p.GetProfileArtistHandler)
+		//------ {TODO : project and frame split
 		profileartist.GET("/information", CheckSessionValidity, p.GetProfileArtistInfoHandler)
+		//------ TODO : project and frame split }
 	}
 
 	personal := router.Group("/personal")

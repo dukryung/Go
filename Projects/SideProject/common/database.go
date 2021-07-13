@@ -31,7 +31,7 @@ type DBHandler interface {
 	ReadPersonalInformation(int64) (*ResPersonalInformation, error)
 	UpdatePersonalInformation(*ReqPersonalInformation) error
 
-	ReadProjectDetailArtistProjectInfo(*gin.Context) (*ResProjectDetailInfo, error)
+	ReadProjectDetailArtistProjectInfo(*ReqProjectDetailInfo) (*ResProjectDetailInfo, error)
 	ReadProjectDetailArtistProjectImagesInfo(*gin.Context) (*ResProjectDetailInfo, error)
 	ReadProjectDetailCommentInfo(*gin.Context) (*ResProjectDetailInfo, error)
 
@@ -431,7 +431,8 @@ func (m *mariadbHandler) ReadProjectList(reqpod *ReqProjectsOfTheDay) (*ResProje
 	respod.RankLastNumber = "0"
 
 	//var projectid, ranking uint64
-	var projectid, ranking, title, categorycode, desc, createdat, sellcount, artistnickname, commentcount, totalupvotecount, price, beta string
+	var projectid int64
+	var ranking, title, categorycode, desc, createdat, sellcount, artistnickname, commentcount, totalupvotecount, price, beta string
 	for rows.Next() {
 		err := rows.Scan(&projectid, &title, &categorycode, &desc, &createdat, &sellcount, &artistnickname, &commentcount, &totalupvotecount, &price, &beta, &ranking)
 		if err != nil {
@@ -515,6 +516,7 @@ func (m *mariadbHandler) ReadArtistList() (*ResArtistOfTheMonth, error) {
 	resaom = &ResArtistOfTheMonth{}
 
 	stmt, err := m.db.Prepare(`SELECT 
+								u.id
 								u.nickname,
 								u.introduction,
 								u.image_link,
@@ -540,7 +542,7 @@ func (m *mariadbHandler) ReadArtistList() (*ResArtistOfTheMonth, error) {
 	var artist Artist
 
 	for rows.Next() {
-		rows.Scan(&artist.NickName, &artist.Introduction, &artist.ImageLink, &artist.Rank)
+		rows.Scan(&artist.ArtistID, &artist.NickName, &artist.Introduction, &artist.ImageLink, &artist.Rank)
 		resaom.Artist = append(resaom.Artist, artist)
 	}
 

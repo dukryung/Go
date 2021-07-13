@@ -15,7 +15,7 @@ import (
 )
 
 type User struct {
-	ID                  int64  `json:"id" binding:"required"`
+	UserID              int64  `json:"user_id" binding:"required"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
 	Email               string `json:"email"`
@@ -181,7 +181,7 @@ func UpdateJoinUserInfo(args ArgsUpdateJoinUserInfo) (string, error) {
 		return "", err
 	}
 
-	defer DeleteUserImgFile(args.ctx, args.joinuserinfo.UserInfo.ID, args.database)
+	defer DeleteUserImgFile(args.ctx, args.joinuserinfo.UserInfo.UserID, args.database)
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`UPDATE user SET name=?, nickname=?, email=?,image_link=?,introduction=?,bank=?,account=?,updated_at=NOW()
@@ -198,7 +198,7 @@ func UpdateJoinUserInfo(args ArgsUpdateJoinUserInfo) (string, error) {
 		return "", err
 	}
 
-	result, err := stmt.Exec(args.joinuserinfo.UserInfo.Name, args.joinuserinfo.UserInfo.Nickname, args.joinuserinfo.UserInfo.Email, savedimagepath, args.joinuserinfo.UserInfo.Introduction, args.joinuserinfo.AccountInfo.Bank, args.joinuserinfo.AccountInfo.Account, args.joinuserinfo.UserInfo.ID)
+	result, err := stmt.Exec(args.joinuserinfo.UserInfo.Name, args.joinuserinfo.UserInfo.Nickname, args.joinuserinfo.UserInfo.Email, savedimagepath, args.joinuserinfo.UserInfo.Introduction, args.joinuserinfo.AccountInfo.Bank, args.joinuserinfo.AccountInfo.Account, args.joinuserinfo.UserInfo.UserID)
 	if err != nil {
 		log.Println("[ERR] Exec err:", err)
 		return "", err

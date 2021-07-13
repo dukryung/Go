@@ -139,7 +139,7 @@ func SaveUserImgFile(args ArgsUpdateJoinUserInfo) (string, error) {
 		return "", err
 	}
 
-	storagedir := fmt.Sprintf("%s%d%s%s", userdir, args.joinuserinfo.UserInfo.ID, "/", imagedir)
+	storagedir := fmt.Sprintf("%s%d%s%s", userdir, args.joinuserinfo.UserInfo.UserID, "/", imagedir)
 
 	object := bucket.Object(storagedir + args.userimgfile.Name())
 	writer := object.NewWriter(args.ctx)

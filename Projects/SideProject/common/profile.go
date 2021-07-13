@@ -16,11 +16,11 @@ type ResProfileFrameInfo struct {
 }
 
 type ResProfileProjectInfo struct {
-	ProjectList []Project `json:"project"`
+	ProjectList []Project `json:"project_list"`
 }
 
 type Project struct {
-	ID           int64  `json:"id"`
+	ProjectID    int64  `json:"project_id"`
 	Title        string `json:"title"`
 	Desc         string `json:"desc"`
 	ImageLink    string `json:"image_link"`
@@ -34,11 +34,11 @@ type Project struct {
 }
 
 type ResProfileSellInfo struct {
-	SellList []Sell `json:"sell"`
+	SellList []Sell `json:"sell_list"`
 }
 
 type Sell struct {
-	ID            int64  `json:"id"`
+	SellID        int64  `json:"sell_id"`
 	Title         string `json:"title"`
 	Date          string `json:"date"`
 	BuyerID       int    `json:"buyer_id"`
@@ -47,11 +47,11 @@ type Sell struct {
 }
 
 type ResProfileBuyInfo struct {
-	BuyList []Buy `json:"sell"`
+	BuyList []Buy `json:"buy_list"`
 }
 
 type Buy struct {
-	ID             int64  `json:"id"`
+	ID             int64  `json:"buy_id"`
 	Title          string `json:"title"`
 	Date           string `json:"date"`
 	SellerID       int    `json:"selller_id"`
@@ -60,17 +60,17 @@ type Buy struct {
 }
 
 type ResProfileWithdrawInfo struct {
-	WithdrawList []Withdraw `json:"withdraw"`
+	WithdrawList []Withdraw `json:"withdraw_list"`
 }
 type Withdraw struct {
-	ID            int64  `json:"id"`
+	ID            int64  `json:"withdraw_id"`
 	RequestedDate string `json:"requested_date"`
 	CompleteDate  string `json:"complete_date"`
 	Amount        int    `json:"amount"`
 }
 
 type ReqModificationUserInfo struct {
-	ID                  int64  `json:"id"`
+	UserID              int64  `json:"user_id"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
 	Email               string `json:"email"`
@@ -80,7 +80,7 @@ type ReqModificationUserInfo struct {
 }
 
 type ResModificationUserInfo struct {
-	ID                  int64  `json:"id"`
+	UserID              int64  `json:"user_id"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
 	Email               string `json:"email"`
@@ -91,7 +91,7 @@ type ResModificationUserInfo struct {
 
 type ResArtistProfileInfo struct {
 	ArtistInfo  ArtistProfile `json:"artist"`
-	ProjectList []Project     `json:"project"`
+	ProjectList []Project     `json:"project_list"`
 }
 
 type ArtistProfile struct {
@@ -189,7 +189,7 @@ func (m *mariadbHandler) ReadProfileProjectInfo(userid int64) (*ResProfileProjec
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&project.ID, &project.Title, &project.Desc, &project.ImageLink, &project.CreatedAt, &project.SellCount, &project.CommontCount, &project.CommontCount, &project.Price, &project.Beta)
+		err = rows.Scan(&project.ProjectID, &project.Title, &project.Desc, &project.ImageLink, &project.CreatedAt, &project.SellCount, &project.CommontCount, &project.CommontCount, &project.Price, &project.Beta)
 		if err != nil {
 			log.Println("[ERR] stmt query err : ", err)
 			return nil, err
@@ -234,7 +234,7 @@ func (m *mariadbHandler) ReadProfileSellInfo(userid int64) (*ResProfileSellInfo,
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&sell.ID, &sell.Title, &sell.Date, &sell.BuyerID, &sell.BuyerNickName, &sell.Price)
+		err = rows.Scan(&sell.SellID, &sell.Title, &sell.Date, &sell.BuyerID, &sell.BuyerNickName, &sell.Price)
 		if err != nil {
 			log.Println("[ERR] stmt query err : ", err)
 			return nil, err
@@ -348,7 +348,7 @@ func (m *mariadbHandler) UpdateModificationUserInfo(reqmodinfo *ReqModificationU
 
 	stmt.Exec()
 
-	result, err := stmt.Exec(reqmodinfo.Name, reqmodinfo.Nickname, reqmodinfo.Email, reqmodinfo.AgreeEmailMarketing, reqmodinfo.Introduction, reqmodinfo.ImageLink, reqmodinfo.ID)
+	result, err := stmt.Exec(reqmodinfo.Name, reqmodinfo.Nickname, reqmodinfo.Email, reqmodinfo.AgreeEmailMarketing, reqmodinfo.Introduction, reqmodinfo.ImageLink, reqmodinfo.UserID)
 	if err != nil {
 		log.Println("[ERR] Exec err : ", err)
 		return err
@@ -455,7 +455,7 @@ func (m *mariadbHandler) ReadProfileArtistInfo(artistid int64) (*ResArtistProfil
 	}
 
 	for rows.Next() {
-		err = rows.Scan(&resartistinfo.ArtistInfo.ArtistID, &resartistinfo.ArtistInfo.ArtistNickName, &resartistinfo.ArtistInfo.Introduction, &resartistinfo.ArtistInfo.ProjectCount, &resartistinfo.ArtistInfo.SellCount, &resartistinfo.ArtistInfo.ImageLink, &project.ID, &project.Title, &project.Desc, &project.ImageLink, &project.CreatedAt, &project.SellCount, &project.UserNickName, &project.CommontCount, &project.UpvoteCount, &project.Price, &project.Beta)
+		err = rows.Scan(&resartistinfo.ArtistInfo.ArtistID, &resartistinfo.ArtistInfo.ArtistNickName, &resartistinfo.ArtistInfo.Introduction, &resartistinfo.ArtistInfo.ProjectCount, &resartistinfo.ArtistInfo.SellCount, &resartistinfo.ArtistInfo.ImageLink, &project.ProjectID, &project.Title, &project.Desc, &project.ImageLink, &project.CreatedAt, &project.SellCount, &project.UserNickName, &project.CommontCount, &project.UpvoteCount, &project.Price, &project.Beta)
 		if err != nil {
 			log.Println("[ERR] scan err : ", err)
 			return nil, err
