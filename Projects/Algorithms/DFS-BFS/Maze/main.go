@@ -68,7 +68,7 @@ func BFS(x int, y int) (int, error) {
 	for {
 
 		if len(q.queue) == 0 {
-			fmt.Println("quene end	")
+			fmt.Println("quene end")
 			break
 		}
 
@@ -80,8 +80,6 @@ func BFS(x int, y int) (int, error) {
 
 		x = pos.x
 		y = pos.y
-		fmt.Println("x :", x)
-		fmt.Println("y :", y)
 
 		for i := range dy {
 			nx := x + dx[i]
