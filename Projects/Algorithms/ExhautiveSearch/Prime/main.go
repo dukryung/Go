@@ -19,20 +19,19 @@ var (
 )
 
 func main() {
-
 	result := solution("1234")
-
 	fmt.Println("result : ", result)
 }
+
 func solution(numbers string) int {
-	nums = strToIntSlice(numbers)
+	nums = StrtoIntSlice(numbers)
 	picked = make([]bool, len(nums))
 	isPrime = makePrimes()
 
 	return solve(0)
 }
 
-func strToIntSlice(str string) []int {
+func StrtoIntSlice(str string) []int {
 	ret := make([]int, len(str))
 
 	for i, v := range str {
@@ -49,6 +48,7 @@ func makePrimes() []int {
 	sort.Sort(sort.Reverse(sort.IntSlice(reverseNums)))
 
 	upper := 0
+
 	for _, v := range reverseNums {
 		upper *= 10
 		upper += v
@@ -85,6 +85,7 @@ func solve(number int) int {
 		}
 
 		picked[i] = true
+
 		next := number*10 + nums[i]
 		if isPrime[next] == Prime {
 			ret++
