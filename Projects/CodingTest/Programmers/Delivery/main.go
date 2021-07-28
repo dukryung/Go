@@ -2,6 +2,10 @@ package main
 
 import "fmt"
 
+var (
+	visited []bool
+)
+
 func main() {
 
 }
@@ -14,3 +18,5 @@ func solution(N int, road [][]int, k int) int {
 
 	return answer
 }
+
+func 
