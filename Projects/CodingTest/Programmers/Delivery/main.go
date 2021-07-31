@@ -1,10 +1,5 @@
 package main
 
-var (
-	visited []bool
-	roads   [][]int
-)
-
 func main() {
 
 	solution(5, [][]int{{1, 2, 1}, {2, 3, 3}, {5, 2, 2}, {1, 4, 2}, {5, 3, 1}, {5, 4, 2}}, 3)
@@ -26,14 +21,14 @@ func solution(N int, road [][]int, k int) int {
 		queue = queue[1:]
 		for _, r := range road {
 			if r[0] == cur || r[1] == cur {
-				f, t := r[0], r[1]
+				from, to := r[0], r[1]
 				if r[1] == cur {
-					f, t = r[1], r[0]
+					from, to = r[1], r[0]
 				}
-
-				if length[t] > length[f]+r[2] {
-					length[t] = length[f] + r[2]
-					queue = append(queue, t)
+				//시작 해당 노드 위치를 기준으로 걸리는 시간을 계산한 값과 다른 노드의 최소 걸리는 시간을 비교하는 로직
+				if length[to] > length[from]+r[2] {
+					length[to] = length[from] + r[2]
+					queue = append(queue, to)
 				}
 			}
 		}
