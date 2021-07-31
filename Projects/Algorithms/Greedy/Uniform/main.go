@@ -1,45 +1,62 @@
 package main
 
-func remove(s []int, i int) []int {
-	switch {
-	case len(s)-1 == i:
-		return append(s[:len(s)-1])
-	case i == 0:
-		return append(s[1:])
-	default:
-		return append(s[:i], s[i+1:]...)
+import "fmt"
 
-	}
+func main() {
+	//result := solution(5, []int{2, 4}, []int{1, 3, 5})
+	//result := solution(5, []int{2, 4}, []int{3})
+	//result := solution(3, []int{1, 2}, []int{2, 3})
+	//result := solution(3, []int{2, 3}, []int{1})
+	//result := solution(24, []int{12, 13, 16, 17, 19, 20, 21, 22}, []int{1, 22, 16, 18, 9, 10})
+	result := solution(8, []int{2, 3, 4}, []int{1})
+	fmt.Println("result :", result)
 }
 
-func Solution(n int, lost []int, reserve []int) int {
-	// 여벌 체육복을 가져왔으나 도난 당한 경우는 제외한다.
-	for p := 0; p < len(lost); p++ {
-		for q := 0; q < len(reserve); q++ {
-			if reserve[q] == lost[p] {
-				lost = remove(lost, p)
-				p--
-				reserve = remove(reserve, q)
-				q--
-				break
-			}
-		}
+func solution(n int, lost []int, reserve []int) int {
+	var length = make([]int, n+1)
+
+	for i := 1; i <= n; i++ {
+		length[i] = 1
+	}
+	length[0] = -2
+
+	for _, value := range lost {
+		length[value] -= 1
 	}
 
-	can := n - len(lost) // 체육수업을 들을 수 있는 학생 수
+	for _, value := range reserve {
+		length[value] += 1
+	}
 
-	// 체육복을 잃어버린 학생이 앞, 또는 뒤 번호에 체육복을 빌려준다.
-	for p := 0; p < len(lost); p++ {
-		for q := 0; q < len(reserve); q++ {
-			if reserve[q] == lost[p]-1 || reserve[q] == lost[p]+1 {
-				can++
-				lost = remove(lost, p)
-				p--
-				reserve = remove(reserve, q)
-				q--
-				break
+	for i := range length {
+		if length[i] != 2 {
+			continue
+		}
+
+		if length[i-1] == 0 && i-1 > 0 {
+			length[i] = 1
+			length[i-1] = 1
+			continue
+		}
+
+		if i+1 >= len(length) {
+			continue
+		} else {
+			if length[i+1] == 0 {
+				length[i] = 1
+				length[i+1] = 1
+				continue
 			}
 		}
+
 	}
-	return can
+	fmt.Println(length)
+	var ret int
+
+	for _, value := range length {
+		if value >= 1 {
+			ret++
+		}
+	}
+	return ret
 }
