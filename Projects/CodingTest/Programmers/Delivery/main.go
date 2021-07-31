@@ -8,6 +8,7 @@ func main() {
 }
 
 func solution(N int, road [][]int, k int) int {
+	// 최소 초기화 시 각 노드의 걸리는 시간을 최대로 설정(그것보다 장은 경우 나중에 업데이트 시겨줌)
 	length := make([]int, N+1)
 	for i := range length {
 		length[i] = k + 1
@@ -34,6 +35,7 @@ func solution(N int, road [][]int, k int) int {
 		}
 	}
 	cnt := 0
+	//check the time
 	for _, l := range length {
 		if l <= k {
 			cnt++
