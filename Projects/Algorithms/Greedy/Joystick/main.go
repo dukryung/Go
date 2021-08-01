@@ -4,8 +4,10 @@ import (
 	"fmt"
 )
 
+/*
 func main() {
 	//name := "ABAAAAAAAAABA"
+
 	name := "JAN"
 
 	solution(name)
@@ -70,4 +72,111 @@ func solution(name string) int {
 	fmt.Println("result : ", result)
 
 	return result
+}
+*/
+
+var (
+	word []string
+)
+
+func main() {
+	//name := "ABAAAAAAAAABA"
+	//name := "JAN"
+	//name := "JEROEN"
+	//name := "J"
+	//name := "JAZ"
+	//name := "AAAAAAAABAABA"
+	name := "ABAAAAAAAAABB"
+
+	solution(name)
+}
+
+func solution(name string) int {
+
+	for _, v := range name {
+		word = append(word, string(v))
+	}
+
+	leftandright := direction()
+	updown := updown(name)
+
+	fmt.Println("updown : ", updown)
+	return leftandright + updown
+}
+
+func direction() int {
+	var l, r, lr int
+
+	for i, v := range word {
+		if i == 0 {
+			continue
+		}
+
+		if v != "A" {
+			r = i
+		}
+	}
+
+	for i, v := range word {
+		if i == 0 {
+			continue
+		}
+
+		if v != "A" {
+			l = len(word) - i
+			break
+		}
+	}
+
+	for i, v := range word {
+		if i == 0 {
+			continue
+		}
+		if v != "A" {
+			lr += i * 2
+			break
+		}
+	}
+
+	var value int
+	for i, v := range word {
+		if i == 0 {
+			continue
+		}
+		if v != "A" {
+			value = len(word) - i
+		}
+	}
+
+	lr += value
+
+	fmt.Println("left : ", l)
+	fmt.Println("right : ", r)
+	fmt.Println("leftright : ", lr)
+
+	if l > r {
+		if r > lr {
+			return lr
+		}
+		return r
+	}
+
+	if l > lr {
+		return lr
+	}
+
+	return l
+
+}
+
+func updown(name string) int {
+	var ret int
+	for _, v := range name {
+		if int(v) < 78 {
+			ret += int(v) - 65
+		} else {
+			ret += 91 - int(v)
+		}
+	}
+	return ret
 }
