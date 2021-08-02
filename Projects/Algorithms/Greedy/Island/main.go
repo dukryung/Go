@@ -126,6 +126,5 @@ func merge(a int, b int) bool {
 			lands[b] = a
 		}
 	}
-
 	return true
 }
