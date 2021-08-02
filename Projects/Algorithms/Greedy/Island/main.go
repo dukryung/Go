@@ -2,25 +2,21 @@ package main
 
 import (
 	"fmt"
+	"sort"
 )
 
 func main() {
 
-	a := [][]int{
-		{0, 1, 5},
-		{1, 2, 3},
-		{2, 3, 3},
-		{3, 1, 2},
-		{3, 0, 4},
-		{2, 4, 6},
-		{4, 0, 7},
-	}
+	//a := [][]int{{0, 1, 5}, {1, 2, 3}, {2, 3, 3}, {3, 1, 2}, {3, 0, 4}, {2, 4, 6}, {4, 0, 7}}
+	a := [][]int{{0, 1, 1}, {3, 4, 1}, {1, 2, 2}, {2, 3, 4}}
 
 	solution(5, a)
 
 }
 
+/*
 var isnums []int
+
 
 func solution(n int, costs [][]int) int {
 
@@ -75,6 +71,63 @@ func merge(a int, b int) bool {
 			isnums[a] = b
 		} else {
 			isnums[b] = a
+		}
+	}
+
+	return true
+}
+*/
+
+var lands []int
+
+func solution(n int, costs [][]int) int {
+	lands = make([]int, n)
+	for i := range lands {
+		lands[i] = i
+	}
+
+	sort.Slice(costs[:], func(i, j int) bool {
+		for range costs[i] {
+			if costs[i][2] == costs[j][2] {
+				continue
+			}
+			return costs[i][2] < costs[j][2]
+		}
+		return false
+	})
+
+	var ret int
+	for _, v := range costs {
+		if merge(v[0], v[1]) {
+			ret += v[2]
+			fmt.Println("v : ", v)
+			fmt.Println("ret : ", ret)
+			fmt.Println("lands : ", lands)
+		}
+	}
+	return ret
+}
+
+func findparent(x int) int {
+	if lands[x] == x {
+		return x
+	} else {
+		return findparent(lands[x])
+	}
+}
+
+func merge(a int, b int) bool {
+
+	a = findparent(a)
+	b = findparent(b)
+
+	if a == b {
+		return false
+	} else {
+		if a > b {
+			lands[a] = b
+		} else {
+			lands[b] = a
 		}
 	}
 
