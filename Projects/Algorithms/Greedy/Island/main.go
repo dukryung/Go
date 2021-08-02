@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -100,9 +99,6 @@ func solution(n int, costs [][]int) int {
 	for _, v := range costs {
 		if merge(v[0], v[1]) {
 			ret += v[2]
-			fmt.Println("v : ", v)
-			fmt.Println("ret : ", ret)
-			fmt.Println("lands : ", lands)
 		}
 	}
 	return ret
