@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 /*
 func main() {
 	//name := "ABAAAAAAAAABA"
@@ -100,7 +96,6 @@ func solution(name string) int {
 	leftandright := direction()
 	updown := updown(name)
 
-	fmt.Println("updown : ", updown)
 	return leftandright + updown
 }
 
@@ -128,31 +123,25 @@ func direction() int {
 		}
 	}
 
+	var limit, value int
 	for i, v := range word {
-		if i == 0 {
+		if i == 0 || v == "A" {
 			continue
 		}
-		if v != "A" {
-			lr += i * 2
+
+		if limit >= 2 {
 			break
 		}
-	}
 
-	var value int
-	for i, v := range word {
-		if i == 0 {
-			continue
-		}
-		if v != "A" {
-			value = len(word) - i
+		limit++
+		if limit == 1 {
+			value += i * 2
+		} else if limit == 2 {
+			value += len(word) - i
 		}
 	}
 
-	lr += value
-
-	fmt.Println("left : ", l)
-	fmt.Println("right : ", r)
-	fmt.Println("leftright : ", lr)
+	lr = value
 
 	if l > r {
 		if r > lr {
