@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 )
 
 func main() {
-	// var number = "1231234"
-	// var k = 3
+	//var number = "1231234"
+	//var k = 3
 	//var number = "1924"
 	//var k = 2
 	var number = "4177252841"
@@ -17,6 +18,7 @@ func main() {
 
 }
 
+/*
 func solution(number string, k int) string {
 	var result string
 	var extractcnt, compareextractcnt int
@@ -39,6 +41,41 @@ func solution(number string, k int) string {
 			number = string(number[index+1:])
 		}
 		result += string(extractstr)
+
+	}
+
+	return result
+}
+*/
+
+func solution(number string, k int) string {
+	var length int
+	var s int
+	var limit = k
+
+	num := make([]int, len(number))
+	var result string
+	for i, v := range number {
+		n, _ := strconv.Atoi(string(v))
+		num[i] = n
+	}
+	for {
+
+		if length == len(number)-k {
+			break
+		}
+
+		var value int
+		for i := s; i <= limit; i++ {
+
+			if num[i] > value {
+				value = num[i]
+				s = i + 1
+			}
+		}
+		result += strconv.Itoa(value)
+		limit++
+		length++
 
 	}
 
