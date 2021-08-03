@@ -1,11 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 )
 
 type Queue struct {
@@ -41,16 +37,20 @@ func main() {
 	maze = [][]int{{1, 0, 1, 0, 1, 0}, {1, 1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 1}, {1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1}}
 
 	//맵 길이 지정 받기
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	text := scanner.Text()
-	slice := strings.Split(text, " ")
-	nums := make([]int, 2)
-	for i, num := range slice {
-		nums[i], _ = strconv.Atoi(num)
-		n = nums[0]
-		m = nums[1]
-	}
+	/*
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		text := scanner.Text()
+		slice := strings.Split(text, " ")
+		nums := make([]int, 2)
+		for i, num := range slice {
+			nums[i], _ = strconv.Atoi(num)
+			n = nums[0]
+			m = nums[1]
+		}
+	*/
+	n = 5
+	m = 6
 
 	//미로 찾기(횟수 확인)
 	result, err := BFS(0, 0)
@@ -100,6 +100,8 @@ func BFS(x int, y int) (int, error) {
 			}
 		}
 	}
+	fmt.Println("m : ", m)
+	fmt.Println("n : ", n)
 
 	return maze[n-1][m-1], nil
 
