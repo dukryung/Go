@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 var arr []int
 
 func main() {
@@ -11,6 +9,7 @@ func main() {
 	solution(n, testarr)
 }
 
+/*
 type Queue struct {
 	queue []*Pos
 }
@@ -86,5 +85,27 @@ func bfs(x int, y int, computers [][]int) {
 	}
 
 	return
+
+}
+*/
+var Queue []Pos
+
+type Pos struct {
+	x int
+	y int
+}
+
+func EnQueue(position Pos) {
+	Queue = append(Queue, position)
+}
+
+func DeQueue() Pos {
+	pos := Queue[0]
+	Queue = Queue[1:]
+
+	return pos
+}
+
+func solution(n int, computers [][]int) int {
 
 }
