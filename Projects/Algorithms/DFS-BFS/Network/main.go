@@ -107,5 +107,5 @@ func DeQueue() Pos {
 }
 
 func solution(n int, computers [][]int) int {
-
+	
 }
