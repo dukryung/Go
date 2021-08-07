@@ -1,11 +1,16 @@
 package main
 
+import (
+	"fmt"
+)
+
 var arr []int
 
 func main() {
-	n := 3
-	var testarr = [][]int{{1, 1, 0}, {1, 1, 0}, {0, 0, 1}}
-	//var testarr = [][]int{{1, 0, 0, 1}, {0, 1, 1, 0}, {0, 1, 1, 0}, {1, 1, 0, 1}}
+	//n := 3
+	n := 4
+	//var testarr = [][]int{{1, 1, 0}, {1, 1, 0}, {0, 0, 1}}
+	var testarr = [][]int{{1, 0, 0, 1}, {0, 1, 1, 0}, {0, 1, 1, 0}, {1, 1, 0, 1}}
 	solution(n, testarr)
 }
 
@@ -88,7 +93,12 @@ func bfs(x int, y int, computers [][]int) {
 
 }
 */
-var Queue []Pos
+
+var (
+	networks  [][]int
+	Queue     []Pos
+	isVisited []bool
+)
 
 type Pos struct {
 	x int
@@ -107,5 +117,62 @@ func DeQueue() Pos {
 }
 
 func solution(n int, computers [][]int) int {
-	
+	var ret int
+	isVisited = make([]bool, len(computers))
+	networks = make([][]int, len(computers))
+	copy(networks, computers)
+
+	for i := range isVisited {
+		fmt.Println("isVisited : ", isVisited)
+		if isVisited[i] {
+			continue
+		}
+		BFS(i, i)
+
+		ret++
+	}
+	fmt.Println("ret : ", ret)
+	return ret
+}
+
+func BFS(x int, y int) {
+	var pos Pos
+	pos.x = x
+	pos.y = y
+	EnQueue(pos)
+
+	for {
+		if len(Queue) == 0 {
+			break
+		}
+		fmt.Println("-----------1")
+		pos = DeQueue()
+		fmt.Println("pos :", pos)
+		for i := 0; i < len(networks); i++ {
+			if pos.x == i {
+				continue
+			}
+
+			if networks[pos.x][i] == 1 {
+				isVisited[i] = true
+				networks[pos.x][i] = 0
+				pos.y = i
+				EnQueue(pos)
+			}
+		}
+
+		for i := 0; i < len(networks); i++ {
+			if pos.y == i {
+				continue
+			}
+			if networks[i][pos.y] == 1 {
+				isVisited[i] = true
+				networks[i][pos.y] = 0
+				pos.x = i
+				EnQueue(pos)
+			}
+		}
+		fmt.Println(networks)
+		//time.Sleep(time.Second * 10)
+	}
 }
