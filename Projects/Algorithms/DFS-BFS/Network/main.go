@@ -7,10 +7,10 @@ import (
 var arr []int
 
 func main() {
-	//n := 3
-	n := 4
-	//var testarr = [][]int{{1, 1, 0}, {1, 1, 0}, {0, 0, 1}}
-	var testarr = [][]int{{1, 0, 0, 1}, {0, 1, 1, 0}, {0, 1, 1, 0}, {1, 1, 0, 1}}
+	n := 3
+	//n := 4
+	var testarr = [][]int{{1, 1, 0}, {1, 1, 0}, {0, 0, 1}}
+	//var testarr = [][]int{{1, 0, 0, 1}, {0, 1, 1, 0}, {0, 1, 1, 0}, {1, 1, 0, 1}}
 	solution(n, testarr)
 }
 
@@ -123,11 +123,12 @@ func solution(n int, computers [][]int) int {
 	copy(networks, computers)
 
 	for i := range isVisited {
-		fmt.Println("isVisited : ", isVisited)
 		if isVisited[i] {
 			continue
 		}
 		BFS(i, i)
+		isVisited[i] = true
+		fmt.Println("isVisited : ", isVisited)
 
 		ret++
 	}
@@ -148,10 +149,8 @@ func BFS(x int, y int) {
 		fmt.Println("-----------1")
 		pos = DeQueue()
 		fmt.Println("pos :", pos)
+		networks[pos.x][pos.y] = 0
 		for i := 0; i < len(networks); i++ {
-			if pos.x == i {
-				continue
-			}
 
 			if networks[pos.x][i] == 1 {
 				isVisited[i] = true
@@ -162,9 +161,7 @@ func BFS(x int, y int) {
 		}
 
 		for i := 0; i < len(networks); i++ {
-			if pos.y == i {
-				continue
-			}
+
 			if networks[i][pos.y] == 1 {
 				isVisited[i] = true
 				networks[i][pos.y] = 0
