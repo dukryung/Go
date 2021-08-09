@@ -37,6 +37,6 @@ func dfs(prev int, index int, numbers []int, target int) int {
 
 	answer += dfs(cur1, index+1, numbers, target)
 	answer += dfs(cur2, index+1, numbers, target)
-
+	fmt.Println("answer : ", answer)
 	return answer
 }
