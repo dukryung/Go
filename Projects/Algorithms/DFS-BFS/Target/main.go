@@ -11,6 +11,7 @@ func main() {
 	fmt.Println("answer : ", answer)
 }
 
+/*
 func solution(numbers []int, target int) int {
 
 	currentnum := numbers[0]
@@ -37,6 +38,34 @@ func dfs(prev int, index int, numbers []int, target int) int {
 
 	answer += dfs(cur1, index+1, numbers, target)
 	answer += dfs(cur2, index+1, numbers, target)
-	fmt.Println("answer : ", answer)
+
+	return answer
+}
+*/
+func solution(numbers []int, target int) int {
+	var answer int
+
+	curnum := numbers[0]
+	answer += DFS(curnum, 1, numbers, target)
+	answer += DFS(-curnum, 1, numbers, target)
+
+	return answer
+}
+func DFS(prevnum int, index int, numbers []int, target int) int {
+	var answer int
+
+	if index == len(numbers) {
+		if prevnum == target {
+			return 1
+		}
+		return 0
+	}
+
+	firstcurnum := prevnum + numbers[index]
+	secondcurnum := prevnum - numbers[index]
+
+	answer += DFS(firstcurnum, index+1, numbers, target)
+	answer += DFS(secondcurnum, index+1, numbers, target)
+
 	return answer
 }
