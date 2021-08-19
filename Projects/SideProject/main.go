@@ -1,7 +1,6 @@
 package main
 
 import (
-	"Go/Projects/SideProject/common"
 	"log"
 	"net/http"
 	"os"
@@ -9,7 +8,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"golang.org/x/net/context"
+	"sideproject.com/route"
 )
 
 func main() {
@@ -18,11 +19,14 @@ func main() {
 
 	databasename := "sideproject"
 
-	router := common.MakeHandler(databasename)
+	rout := gin.Default()
+	rout.LoadHTMLGlob("./public/*")
+
+	route.MakeHandler(rout, databasename)
 
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: router,
+		Handler: rout,
 	}
 
 	go func() {

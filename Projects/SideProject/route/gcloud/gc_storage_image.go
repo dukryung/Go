@@ -1,4 +1,4 @@
-package common
+package gcloud
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
+	common "sideproject.com/common"
 )
 
 //Image is struct to make  image function concerned  objectively.
@@ -19,7 +20,7 @@ type Image struct {
 }
 
 //SaveProjectImages is function to save project images.
-func (i *Image) SaveProjectImages(ctx context.Context, userid *int, projectid int64, imagefdarr []*os.File) ([]string, error) {
+func (i *Image) SaveProjectImages(ctx context.Context, userid int64, projectid int64, imagefdarr []*os.File) ([]string, error) {
 	var id = uuid.New()
 	var imagefullpatharr []string
 
@@ -46,7 +47,7 @@ func (i *Image) SaveProjectImages(ctx context.Context, userid *int, projectid in
 }
 
 //DeleteProjectImages is function to delete project images.
-func DeleteProjectImages(ctx context.Context, userid *int, projectid int64, database *sql.DB) error {
+func DeleteProjectImages(ctx context.Context, userid int64, projectid int64, database *sql.DB) error {
 	var prefix = fmt.Sprintf("%s%d%s%s%d%s", userdir, userid, "/", projectdir, projectid, imagedir)
 	var delimeter = "/"
 
@@ -131,22 +132,22 @@ func ReadProjectImageLinks(projectid int64, database *sql.DB) ([]string, error) 
 }
 
 //SaveUserImgFile is fuction to save user image to google cloud stroage.
-func SaveUserImgFile(args ArgsUpdateJoinUserInfo) (string, error) {
+func SaveUserImgFile(args common.ArgsUpdateJoinUserInfo) (string, error) {
 	id := uuid.New()
-	bucket, err := GetBucket(args.ctx)
+	bucket, err := GetBucket(args.CTX)
 	if err != nil {
 		log.Println("[ERR] failed to get bucket err : ", err)
 		return "", err
 	}
 
-	storagedir := fmt.Sprintf("%s%d%s%s", userdir, args.joinuserinfo.UserInfo.UserID, "/", imagedir)
+	storagedir := fmt.Sprintf("%s%d%s%s", userdir, args.Joinuserinfo.UserInfo.UserID, "/", imagedir)
 
-	object := bucket.Object(storagedir + args.userimgfile.Name())
-	writer := object.NewWriter(args.ctx)
+	object := bucket.Object(storagedir + args.Userimgfile.Name())
+	writer := object.NewWriter(args.CTX)
 
 	writer.ObjectAttrs.Metadata = map[string]string{"firebaseStorageDownloadTokens": id.String()}
 
-	_, err = io.Copy(writer, args.userimgfile)
+	_, err = io.Copy(writer, args.Userimgfile)
 	if err != nil {
 		log.Println("[ERR] io copy err : ", err)
 		return "", err
@@ -154,7 +155,7 @@ func SaveUserImgFile(args ArgsUpdateJoinUserInfo) (string, error) {
 
 	writer.Close()
 
-	return storagedir + args.userimgfile.Name(), nil
+	return storagedir + args.Userimgfile.Name(), nil
 }
 
 //DeleteUserImgFile is function to check thage the user image folder exists in storage.

@@ -1,26 +1,46 @@
-package common
+package user
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"log"
 	"mime/multipart"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/appengine"
+	common "sideproject.com/common"
+	"sideproject.com/gcloud"
 )
 
-type User struct {
+type Usr struct {
+	DB *sql.DB
+}
+
+// JSUser is used to indicate that these are json type's artist informations.
+type JSUser struct {
 	UserID              int64  `json:"user_id" binding:"required"`
 	Name                string `json:"name"`
 	Nickname            string `json:"nickname"`
 	Email               string `json:"email"`
 	Introduction        string `json:"introduction"`
 	AgreeEmailMarketing bool   `json:"agree_email_marketing"`
+}
+
+//ResUserInfo is structure to contain user information in index page.
+type ResJSUser struct {
+	ID       string `json:"id"`
+	NickName string `json:"nickname"`
+}
+
+//ArgsUpdateJoinUserInfo is a collection of extracted prameters that is user's information.
+
+type ReqJoinInfo struct {
+	UserInfo    JSUser  `json:"user"`
+	AccountInfo Account `json:"account"`
 }
 
 type Account struct {
@@ -30,21 +50,54 @@ type Account struct {
 	AgreePolicy bool   `json:"agree_policy"`
 }
 
-//ArgsUpdateJoinUserInfo is a collection of extracted prameters that is user's information.
-type ArgsUpdateJoinUserInfo struct {
-	ctx          context.Context
-	userimgfile  *os.File
-	joinuserinfo *ReqJoinInfo
-	database     *sql.DB
+type AuthUserInfo struct {
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	Name          string `json:"name"`
+	Social        string `json:"social"`
+	VerifiedEmail bool   `json:"verified_email"`
+	Picture       string `json:"picture"`
+}
+
+func (u *Usr) Routes(route *gin.RouterGroup) {
+	route.GET("/", u.getUser)
+	route.PUT("/", u.putUser)
+}
+
+func (u *Usr) getUser(c *gin.Context) {
+
+	jsu := &JSUser{}
+
+	err := c.ShouldBindJSON(jsu)
+	if err != nil {
+		log.Println("[ERR] failed to extract user idd err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resuser := u.ReadUserInfo(jsu.UserID)
+	c.JSON(http.StatusOK, resuser)
+}
+
+func (u *Usr) putUser(c *gin.Context) {
+	filefullpath, err := u.SaveJoinUserInfo(c)
+	if err != nil {
+		log.Println("[ERR] get image file err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"filedirinfo": filefullpath,
+	})
 }
 
 //ReadUserInfo is fuction to read user information.
-func (m *mariadbHandler) ReadUserInfo(userid int64) *ResUserInfo {
-	var resuser *ResUserInfo
+func (u *Usr) ReadUserInfo(userid int64) *ResJSUser {
 
-	resuser = &ResUserInfo{}
+	var resjsu = &ResJSUser{}
 
-	stmt, err := m.db.Prepare(`SELECT id, nickname
+	stmt, err := u.DB.Prepare(`SELECT id, nickname
 				  FROM user WHERE user.id = ?`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
@@ -62,21 +115,21 @@ func (m *mariadbHandler) ReadUserInfo(userid int64) *ResUserInfo {
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&resuser.ID, &resuser.NickName)
+		err = rows.Scan(&resjsu.ID, &resjsu.NickName)
 		if err != nil {
 			log.Println("[ERR] stmt query err : ", err)
 			return nil
 		}
 	}
 
-	return resuser
+	return resjsu
 }
 
-func (m *mariadbHandler) ReadUserID(sessionid string) (*int, error) {
+func (u *Usr) ReadUserID(sessionid string) (*int, error) {
 
 	var userid *int
 
-	stmt, err := m.db.Prepare(`SELECT id FROM user WHERE session_id = ?`)
+	stmt, err := u.DB.Prepare(`SELECT id FROM user WHERE session_id = ?`)
 	if err != nil {
 		log.Println("[ERR] prepare stmt err : ", err)
 		return nil, err
@@ -102,8 +155,8 @@ func (m *mariadbHandler) ReadUserID(sessionid string) (*int, error) {
 }
 
 //CreateUserInfo is function to create user information.
-func (m *mariadbHandler) CreateUserInfo(authuserinfo AuthUserInfo) error {
-	tx, err := m.db.Begin()
+func (u *Usr) CreateUserInfo(authuserinfo AuthUserInfo) error {
+	tx, err := u.DB.Begin()
 	if err != nil {
 		log.Println("[ERR] transaction begin err : ", err)
 		return err
@@ -143,24 +196,24 @@ func (m *mariadbHandler) CreateUserInfo(authuserinfo AuthUserInfo) error {
 }
 
 //SaveImageFiles is function to get user's images
-func (m *mariadbHandler) SaveJoinUserInfo(c *gin.Context) (string, error) {
-	var args ArgsUpdateJoinUserInfo
+func (u *Usr) SaveJoinUserInfo(c *gin.Context) (string, error) {
+	var args common.ArgsUpdateJoinUserInfo
 	multipartreader, err := c.Request.MultipartReader()
 	if err != nil {
 		log.Println("[ERR] multipartreader err : ", err)
 		return "", err
 	}
 
-	args.joinuserinfo, args.userimgfile, err = ExtractJoinUserInfo(multipartreader)
+	args.Joinuserinfo, args.Userimgfile, err = ExtractJoinUserInfo(multipartreader)
 	if err != nil {
 		log.Println("[ERR] getjoininfo err : ", err)
 		return "", err
 	}
 
-	defer args.userimgfile.Close()
+	defer args.Userimgfile.Close()
 
-	args.ctx = appengine.NewContext(c.Request)
-	args.database = m.db
+	args.CTX = appengine.NewContext(c.Request)
+	args.DB = u.DB
 
 	filefullpath, err := UpdateJoinUserInfo(args)
 	if err != nil {
@@ -173,15 +226,15 @@ func (m *mariadbHandler) SaveJoinUserInfo(c *gin.Context) (string, error) {
 }
 
 //UpdateJoinUserInfo is Function to post a imagefile for Google Storage cloud.
-func UpdateJoinUserInfo(args ArgsUpdateJoinUserInfo) (string, error) {
+func UpdateJoinUserInfo(args common.ArgsUpdateJoinUserInfo) (string, error) {
 
-	tx, err := args.database.Begin()
+	tx, err := args.DB.Begin()
 	if err != nil {
 		log.Println("[ERR] begin err : ", err)
 		return "", err
 	}
 
-	defer DeleteUserImgFile(args.ctx, args.joinuserinfo.UserInfo.UserID, args.database)
+	defer gcloud.DeleteUserImgFile(args.CTX, args.Joinuserinfo.UserInfo.UserID, args.DB)
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`UPDATE user SET name=?, nickname=?, email=?,image_link=?,introduction=?,bank=?,account=?,updated_at=NOW()
@@ -192,17 +245,17 @@ func UpdateJoinUserInfo(args ArgsUpdateJoinUserInfo) (string, error) {
 	}
 	defer stmt.Close()
 
-	savedimagepath, err := SaveUserImgFile(args)
+	savedimagepath, err := gcloud.SaveUserImgFile(args)
 	if err != nil {
 		log.Println("[ERR] failed to save user image file to google cloud storage err : ", err)
 		return "", err
 	}
 
-	result, err := stmt.Exec(args.joinuserinfo.UserInfo.Name, args.joinuserinfo.UserInfo.Nickname, args.joinuserinfo.UserInfo.Email, savedimagepath, args.joinuserinfo.UserInfo.Introduction, args.joinuserinfo.AccountInfo.Bank, args.joinuserinfo.AccountInfo.Account, args.joinuserinfo.UserInfo.UserID)
 	if err != nil {
 		log.Println("[ERR] Exec err:", err)
 		return "", err
 	}
+	result, err := stmt.Exec(args.Joinuserinfo.UserInfo.Name, args.Joinuserinfo.UserInfo.Nickname, args.Joinuserinfo.UserInfo.Email, savedimagepath, args.Joinuserinfo.UserInfo.Introduction, args.Joinuserinfo.AccountInfo.Bank, args.Joinuserinfo.AccountInfo.Account, args.Joinuserinfo.UserInfo.UserID)
 
 	rowcnt, err := result.RowsAffected()
 	if err != nil {
@@ -222,8 +275,8 @@ func UpdateJoinUserInfo(args ArgsUpdateJoinUserInfo) (string, error) {
 }
 
 //ExtractJoinUserInfo is function to get join information inserted.
-func ExtractJoinUserInfo(multipartreader *multipart.Reader) (*ReqJoinInfo, *os.File, error) {
-	var reqjoininfo ReqJoinInfo
+func ExtractJoinUserInfo(multipartreader *multipart.Reader) (*common.ReqJoinInfo, *os.File, error) {
+	var reqjoininfo common.ReqJoinInfo
 	var userimgfile *os.File
 
 	for {

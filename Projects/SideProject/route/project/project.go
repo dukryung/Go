@@ -1,9 +1,12 @@
-package common
+package project
 
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"google.golang.org/appengine"
@@ -13,8 +16,12 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	gcloud "sideproject.com/gcloud"
 )
 
+type Pjt struct {
+	DB *sql.DB
+}
 type ReqProjectDetailInfo struct {
 	UserID    int `json:"user_id"`
 	ProjectID int `json:"project_id"`
@@ -60,15 +67,12 @@ type ProjectDetailReplyInfo struct {
 
 type ReqUploadProjectInfo struct {
 	ID          int64  `json:"id"`
+	ProjectID   int64  `json:"projecid`
 	Title       string `json:"title"`
 	Category    string `json:"category"`
 	Desc        string `json:"desc"`
 	Price       int    `json:"price"`
 	YoutubeLink string `json:"youtube"`
-}
-
-type project struct {
-	db DBHandler
 }
 
 //ReqProjectsOfTheDay is structure to contain request informationå.
@@ -103,12 +107,236 @@ type ProjectList struct {
 	Rank          string `json:"rank"`
 }
 
-func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(reqprojectdetailinfo *ReqProjectDetailInfo) (*ResProjectDetailInfo, error) {
+func (p *Pjt) Routes(route *gin.RouterGroup) {
+
+	route.GET("/information", p.getProject)
+	route.GET("/information/detail/project", p.getProjectDetailProjectInformation)
+	route.GET("/informaiton/detail/image", p.getProjectDetailProjectImages)
+	route.GET("/informaiton/detail/comment", p.getProjectDetailComment)
+	route.POST("/information/upload", p.postProjectUpload)
+	route.PUT("/information/upload")
+
+}
+func (p *Pjt) putProjectUpload(c *gin.Context) {
+
+}
+
+func (p *Pjt) postProjectUpload(c *gin.Context) {
+
+	err := p.CreateProjectInfo(c)
+	if err != nil {
+		log.Println("[ERR] failed to upload project err : ", err)
+		c.JSON(http.StatusOK, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
+
+}
+
+func (p *Pjt) getProjectDetailProjectInformation(c *gin.Context) {
+	var reqprojectdetailinfo = &ReqProjectDetailInfo{}
+	err := c.ShouldBindJSON(reqprojectdetailinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resprojectdetail, err := p.ReadProjectDetailArtistProjectInfo(reqprojectdetailinfo)
+	if err != nil {
+		log.Println("[ERR] failed to read project detail information err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprojectdetail)
+
+}
+
+func (p *Pjt) getProjectDetailProjectImages(c *gin.Context) {
+
+	resprojectdetailimagesinfo, err := p.ReadProjectDetailArtistProjectImagesInfo(c)
+	if err != nil {
+		log.Println("[ERR] failed to read project detail image links err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprojectdetailimagesinfo)
+}
+
+func (p *Pjt) getProjectDetailComment(c *gin.Context) {
+	resprojectdetailimagesinfo, err := p.ReadProjectDetailCommentInfo(c)
+	if err != nil {
+		log.Println("[ERR] failed to read project detail image links err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, resprojectdetailimagesinfo)
+}
+
+func (p *Pjt) getProject(c *gin.Context) {
+	reqpod := &ReqProjectsOfTheDay{}
+	err := c.ShouldBindJSON(reqpod)
+	if err != nil {
+		log.Println("[ERR] json err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	respod, err := p.ReadProjectList(reqpod)
+	if err != nil {
+		log.Println("[ERR] failed to read project list err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, respod)
+
+}
+
+func (p *Pjt) ReadProjectList(reqpod *ReqProjectsOfTheDay) (*ResProjectsOfTheDay, error) {
+
+	var respod *ResProjectsOfTheDay
+	respod = &ResProjectsOfTheDay{Date: reqpod.DemandDate}
+
+	stmt, err := p.DB.Prepare(`SELECT 
+						p.id, 
+						p.title, 
+						p.category_id,
+				 		p.description,
+						DATE_FORMAT(p.created_at,"%Y-%m-%d"),
+						p.sell_count, 
+						u.nickname, 
+						p.comment_count,
+						p.total_upvote_count,
+						p.price,
+						p.beta,
+						RANK() OVER(ORDER BY p_r.score DESC)   
+				  FROM project AS p INNER JOIN project_rank AS p_r ON p.id = p_r.project_id 
+				  					INNER JOIN user AS u ON p.user_id = u.id
+				  WHERE p_r.created_at BETWEEN DATE_FORMAT(DATE_SUB( ? ,INTERVAL ? DAY),"%Y-%m-%d") AND DATE_FORMAT(DATE_ADD( ? ,INTERVAL ? DAY), "%Y-%m-%d")
+				  LIMIT 10;`)
+
+	if err != nil {
+		log.Println("[ERR] stmt err : ", err)
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var rows *sql.Rows
+
+	if reqpod.DemandPeriod == 1 {
+		rows, err = stmt.Query(reqpod.DemandDate, reqpod.DemandPeriod-1, reqpod.DemandDate, reqpod.DemandPeriod)
+		if err != nil {
+			log.Println("[ERR] rows err : ", err)
+			return nil, err
+		}
+	} else if reqpod.DemandPeriod == 7 || reqpod.DemandPeriod == 30 {
+		rows, err = stmt.Query(reqpod.DemandDate, reqpod.DemandPeriod-1, reqpod.DemandDate, 1)
+		if err != nil {
+			log.Println("[ERR] rows err : ", err)
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("[ERR] wrong period")
+	}
+
+	defer rows.Close()
+
+	var project ProjectList
+	respod.Date = reqpod.DemandDate
+	respod.Period = reqpod.DemandPeriod
+	respod.Total = "0"
+	respod.RankLastNumber = "0"
+
+	//var projectid, ranking uint64
+	var projectid int64
+	var ranking, title, categorycode, desc, createdat, sellcount, artistnickname, commentcount, totalupvotecount, price, beta string
+	for rows.Next() {
+		err := rows.Scan(&projectid, &title, &categorycode, &desc, &createdat, &sellcount, &artistnickname, &commentcount, &totalupvotecount, &price, &beta, &ranking)
+		if err != nil {
+			log.Println("[ERR] scan err : ", err)
+			return nil, err
+		}
+
+		project.ID = projectid
+		project.Title = title
+		project.CategoryCode = categorycode
+		project.Description = desc
+		project.CreatedAt = createdat
+		project.SellCount = sellcount
+		project.AristNickName = artistnickname
+		project.CommentCount = commentcount
+		project.UpvoteCount = totalupvotecount
+		project.Price = price
+		project.Beta = beta
+		project.Rank = ranking
+
+		ranktypeuint64, _ := strconv.ParseUint(ranking, 10, 32)
+		respod.RankLastNumber = strconv.FormatUint(ranktypeuint64+1, 10)
+		respod.Project = append(respod.Project, project)
+	}
+
+	var link string
+	for i := range respod.Project {
+		stmt, err = p.DB.Prepare(`SELECT link FROM image WHERE id = ? LIMIT 1;`)
+		rows, err = stmt.Query(respod.Project[i].ID)
+		if err != nil {
+			log.Println("[ERR] stmt query err : ", err)
+			return nil, err
+		}
+
+		for rows.Next() {
+			err := rows.Scan(&link)
+			if err != nil {
+				log.Println("[ERR] rows scan err : ", err)
+				return nil, err
+			}
+			respod.Project[i].ImageLink = link
+		}
+	}
+
+	stmt, err = p.DB.Prepare(`SELECT COUNT(*) 
+				  FROM project 
+				  WHERE created_at 
+				  BETWEEN DATE_FORMAT(DATE_SUB(?, INTERVAL ? DAY),"%Y-%m-%d") AND DATE_FORMAT(DATE_ADD(?, INTERVAL ? DAY),"%Y-%m-%d")`)
+
+	if reqpod.DemandPeriod == 1 {
+		rows, err = stmt.Query(reqpod.DemandDate, reqpod.DemandPeriod-1, reqpod.DemandDate, reqpod.DemandPeriod)
+		if err != nil {
+			log.Println("[ERR] rows err : ", err)
+			return nil, err
+		}
+	} else if reqpod.DemandPeriod == 7 || reqpod.DemandPeriod == 30 {
+		rows, err = stmt.Query(reqpod.DemandDate, reqpod.DemandPeriod-1, reqpod.DemandDate, 1)
+		if err != nil {
+			log.Println("[ERR] rows err : ", err)
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("[ERR] wrong period")
+	}
+
+	var projectcnt string
+	for rows.Next() {
+		err := rows.Scan(&projectcnt)
+		if err != nil {
+			return nil, err
+		}
+		respod.Total = projectcnt
+	}
+
+	return respod, nil
+}
+
+func (p *Pjt) ReadProjectDetailArtistProjectInfo(reqprojectdetailinfo *ReqProjectDetailInfo) (*ResProjectDetailInfo, error) {
 
 	var resprojectdetailinfo *ResProjectDetailInfo
 
 	// -------{TODO : delete rank column and test query  in database's table.}
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := p.DB.Prepare(`SELECT 
 				  u.id,
 				  u.nickname, 
 				  p.title,
@@ -152,7 +380,7 @@ func (m *mariadbHandler) ReadProjectDetailArtistProjectInfo(reqprojectdetailinfo
 	return resprojectdetailinfo, nil
 }
 
-func (m *mariadbHandler) ReadProjectDetailArtistProjectImagesInfo(c *gin.Context) (*ResProjectDetailInfo, error) {
+func (p *Pjt) ReadProjectDetailArtistProjectImagesInfo(c *gin.Context) (*ResProjectDetailInfo, error) {
 	var reqprojectdtailinfo *ReqProjectDetailInfo
 	var projectdetailimagelinkinfo ProjectDetailImageLinkInfo
 	var resprojectdetailinfo *ResProjectDetailInfo
@@ -169,7 +397,7 @@ func (m *mariadbHandler) ReadProjectDetailArtistProjectImagesInfo(c *gin.Context
 		return nil, err
 	}
 
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := p.DB.Prepare(`SELECT 
 				  link
 				  FROM image 
 				  WHERE project_id = ?
@@ -203,7 +431,7 @@ func (m *mariadbHandler) ReadProjectDetailArtistProjectImagesInfo(c *gin.Context
 
 }
 
-func (m *mariadbHandler) ReadProjectDetailCommentInfo(c *gin.Context) (*ResProjectDetailInfo, error) {
+func (p *Pjt) ReadProjectDetailCommentInfo(c *gin.Context) (*ResProjectDetailInfo, error) {
 	var reqprojectdtailinfo *ReqProjectDetailInfo
 	var resprojectdetailinfo *ResProjectDetailInfo
 	var projectdetailcommentinfo ProjectDetailCommentInfo
@@ -221,7 +449,7 @@ func (m *mariadbHandler) ReadProjectDetailCommentInfo(c *gin.Context) (*ResProje
 		return nil, err
 	}
 
-	stmt, err := m.db.Prepare(`SELECT
+	stmt, err := p.DB.Prepare(`SELECT
 				  c.artist_id,
 				  c.artist_nickname,
 				  c.text,
@@ -266,11 +494,11 @@ func (m *mariadbHandler) ReadProjectDetailCommentInfo(c *gin.Context) (*ResProje
 	return resprojectdetailinfo, nil
 }
 
-func (m *mariadbHandler) CreateProjectInfo(c *gin.Context, userid *int) error {
+func (p *Pjt) CreateProjectInfo(c *gin.Context) error {
 	var isbeta = false
-	var videoobject Video
-	var projectfile ProjectFile
-	var image Image
+	var videoobject gcloud.Video
+	var projectfile gcloud.ProjectFile
+	var image gcloud.Image
 	var lastid int64
 	var projectimagelinks []string
 	var videolink, betalink, originlink string
@@ -283,7 +511,7 @@ func (m *mariadbHandler) CreateProjectInfo(c *gin.Context, userid *int) error {
 
 	ctx := appengine.NewContext(c.Request)
 
-	tx, err := m.db.Begin()
+	tx, err := p.DB.Begin()
 	if err != nil {
 		log.Println("[ERR] begin err : ", err)
 		return err
@@ -299,7 +527,7 @@ func (m *mariadbHandler) CreateProjectInfo(c *gin.Context, userid *int) error {
 		}
 		defer stmt.Close()
 
-		result, err := stmt.Exec(userid, requploadprojectinfo.Category, requploadprojectinfo.Title, requploadprojectinfo.Desc, requploadprojectinfo.Price, requploadprojectinfo.YoutubeLink, isbeta, betalink)
+		result, err := stmt.Exec(requploadprojectinfo.ID, requploadprojectinfo.Category, requploadprojectinfo.Title, requploadprojectinfo.Desc, requploadprojectinfo.Price, requploadprojectinfo.YoutubeLink, isbeta, betalink)
 		if err != nil {
 			log.Println("[ERR] stmt exec err : ", err)
 			return err
@@ -323,7 +551,7 @@ func (m *mariadbHandler) CreateProjectInfo(c *gin.Context, userid *int) error {
 	}
 
 	{
-		originlink, err = projectfile.SaveOriginFile(ctx, userid, lastid, originfd)
+		originlink, err = projectfile.SaveOriginFile(ctx, requploadprojectinfo.ID, lastid, originfd)
 		if err != nil {
 			log.Println("[ERR] failed to save origin file err : ", err)
 			return err
@@ -356,10 +584,10 @@ func (m *mariadbHandler) CreateProjectInfo(c *gin.Context, userid *int) error {
 
 	{
 		if videofd != nil {
-			videolink, err = videoobject.SaveVideoFile(ctx, userid, lastid, videofd)
+			videolink, err = videoobject.SaveVideoFile(ctx, requploadprojectinfo.ID, lastid, videofd)
 			if err != nil {
 				log.Println("[ERR] failed to save video file  err : ", err)
-				err = DeleteOriginFile(ctx, userid, lastid, m.db)
+				err = gcloud.DeleteOriginFile(ctx, requploadprojectinfo.ID, lastid, p.DB)
 				if err != nil {
 					log.Println("[ERR] failed to delete origin file err : ", err)
 					return err
@@ -394,15 +622,15 @@ func (m *mariadbHandler) CreateProjectInfo(c *gin.Context, userid *int) error {
 
 	{
 		if betafd != nil {
-			betalink, err = projectfile.SaveBetaFile(ctx, userid, lastid, betafd)
+			betalink, err = projectfile.SaveBetaFile(ctx, requploadprojectinfo.ID, lastid, betafd)
 			if err != nil {
 				log.Println("[ERR] failed to save beta file  err : ", err)
-				err = DeleteOriginFile(ctx, userid, lastid, m.db)
+				err = gcloud.DeleteOriginFile(ctx, requploadprojectinfo.ID, lastid, p.DB)
 				if err != nil {
 					log.Println("[ERR] failed to delete origin file err : ", err)
 					return err
 				}
-				err = DeleteVideoFile(ctx, userid, lastid, m.db)
+				err = gcloud.DeleteVideoFile(ctx, requploadprojectinfo.ID, lastid, p.DB)
 				if err != nil {
 					log.Println("[ERR] failed to delete video file err : ", err)
 					return err
@@ -437,20 +665,20 @@ func (m *mariadbHandler) CreateProjectInfo(c *gin.Context, userid *int) error {
 
 	{
 
-		projectimagelinks, err = image.SaveProjectImages(ctx, userid, lastid, imagefdarr)
+		projectimagelinks, err = image.SaveProjectImages(ctx, requploadprojectinfo.ID, lastid, imagefdarr)
 		if err != nil {
 			log.Println("[ERR] failed to save project images err : ", err)
-			err = DeleteOriginFile(ctx, userid, lastid, m.db)
+			err = gcloud.DeleteOriginFile(ctx, requploadprojectinfo.ID, lastid, p.DB)
 			if err != nil {
 				log.Println("[ERR] failed to delete origin file err : ", err)
 				return err
 			}
-			err = DeleteVideoFile(ctx, userid, lastid, m.db)
+			err = gcloud.DeleteVideoFile(ctx, requploadprojectinfo.ID, lastid, p.DB)
 			if err != nil {
 				log.Println("[ERR] failed to delete video file err : ", err)
 				return err
 			}
-			err = DeleteBetaFile(ctx, userid, lastid, m.db)
+			err = gcloud.DeleteBetaFile(ctx, requploadprojectinfo.ID, lastid, p.DB)
 			if err != nil {
 				log.Println("[ERR] failed to delete beta file err : ", err)
 				return err
@@ -583,9 +811,9 @@ func GetProjectInfo(c *gin.Context) (*ReqUploadProjectInfo, *os.File, []*os.File
 	return requploadprojectinfo, videofd, imagefdarr, betafd, originfd, nil
 }
 
-func (m *mariadbHandler) InsertProjectInfo(requploadprojectinfo *ReqUploadProjectInfo) error {
+func (p *Pjt) InsertProjectInfo(requploadprojectinfo *ReqUploadProjectInfo) error {
 
-	tx, err := m.db.Begin()
+	tx, err := p.DB.Begin()
 	if err != nil {
 		log.Println("[ERR] begin err : ", err)
 		return err
@@ -598,12 +826,12 @@ func (m *mariadbHandler) InsertProjectInfo(requploadprojectinfo *ReqUploadProjec
 	return nil
 }
 
-func (m *mariadbHandler) UpdateProjectInfo(c *gin.Context, userid *int) error {
-	var videoobject Video
-	var image Image
+func (p *Pjt) UpdateProjectInfo(c *gin.Context) error {
+	var videoobject gcloud.Video
+	var image gcloud.Image
 	var projectimagelinks []string
 	var videolink, betalink, originlink string
-	var projectfile ProjectFile
+	var projectfile gcloud.ProjectFile
 
 	requploadprojectinfo, videofd, imagefdarr, betafd, originfd, err := GetProjectInfo(c)
 	if err != nil {
@@ -613,13 +841,13 @@ func (m *mariadbHandler) UpdateProjectInfo(c *gin.Context, userid *int) error {
 
 	ctx := appengine.NewContext(c.Request)
 
-	tx, err := m.db.Begin()
+	tx, err := p.DB.Begin()
 	if err != nil {
 		log.Println("[ERR] begin err : ", err)
 		return err
 	}
 
-	defer DeleteAllFiles(ctx, userid, requploadprojectinfo.ID, m.db)
+	defer DeleteAllFiles(ctx, requploadprojectinfo.ID, requploadprojectinfo.ProjectID, p.DB)
 	defer tx.Rollback()
 
 	{
@@ -649,7 +877,7 @@ func (m *mariadbHandler) UpdateProjectInfo(c *gin.Context, userid *int) error {
 
 	{
 		if originfd != nil {
-			originlink, err = projectfile.SaveOriginFile(ctx, userid, requploadprojectinfo.ID, originfd)
+			originlink, err = projectfile.SaveOriginFile(ctx, requploadprojectinfo.ID, requploadprojectinfo.ProjectID, originfd)
 			if err != nil {
 				log.Println("[ERR] failed to save origin file err : ", err)
 				return err
@@ -681,7 +909,7 @@ func (m *mariadbHandler) UpdateProjectInfo(c *gin.Context, userid *int) error {
 
 	{
 		if videofd != nil {
-			videolink, err = videoobject.SaveVideoFile(ctx, userid, requploadprojectinfo.ID, videofd)
+			videolink, err = videoobject.SaveVideoFile(ctx, requploadprojectinfo.ID, requploadprojectinfo.ProjectID, videofd)
 			if err != nil {
 				log.Println("[ERR] failed to save video file err : ", err)
 				return err
@@ -714,7 +942,7 @@ func (m *mariadbHandler) UpdateProjectInfo(c *gin.Context, userid *int) error {
 
 	{
 		if betafd != nil {
-			betalink, err = projectfile.SaveBetaFile(ctx, userid, requploadprojectinfo.ID, betafd)
+			betalink, err = projectfile.SaveBetaFile(ctx, requploadprojectinfo.ID, requploadprojectinfo.ProjectID, betafd)
 			if err != nil {
 				log.Println("[ERR] failed to save beta file  err : ", err)
 				return err
@@ -747,7 +975,7 @@ func (m *mariadbHandler) UpdateProjectInfo(c *gin.Context, userid *int) error {
 
 	{
 		if imagefdarr != nil {
-			projectimagelinks, err = image.SaveProjectImages(ctx, userid, requploadprojectinfo.ID, imagefdarr)
+			projectimagelinks, err = image.SaveProjectImages(ctx, requploadprojectinfo.ID, requploadprojectinfo.ProjectID, imagefdarr)
 			if err != nil {
 				log.Println("[ERR] failed to save project images err : ", err)
 				return err
@@ -790,26 +1018,26 @@ func (m *mariadbHandler) UpdateProjectInfo(c *gin.Context, userid *int) error {
 }
 
 //DeleteAllFiles is fuction to delete files(image,beta, origin, etc) saved already
-func DeleteAllFiles(ctx context.Context, userid *int, projectid int64, database *sql.DB) error {
-	err := DeleteVideoFile(ctx, userid, projectid, database)
+func DeleteAllFiles(ctx context.Context, userid int64, projectid int64, database *sql.DB) error {
+	err := gcloud.DeleteVideoFile(ctx, userid, projectid, database)
 	if err != nil {
 		log.Println("[ERR] failed to delete video file err : ", err)
 		return err
 	}
 
-	err = DeleteBetaFile(ctx, userid, projectid, database)
+	err = gcloud.DeleteBetaFile(ctx, userid, projectid, database)
 	if err != nil {
 		log.Println("[ERR] failed to delete beta file err : ", err)
 		return err
 	}
 
-	err = DeleteOriginFile(ctx, userid, projectid, database)
+	err = gcloud.DeleteOriginFile(ctx, userid, projectid, database)
 	if err != nil {
 		log.Println("[ERR] failed to delete original file err : ", err)
 		return err
 	}
 
-	err = DeleteProjectImages(ctx, userid, projectid, database)
+	err = gcloud.DeleteProjectImages(ctx, userid, projectid, database)
 	if err != nil {
 		log.Println("[ERR] failed to delete project images err : ", err)
 		return err

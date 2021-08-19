@@ -1,4 +1,4 @@
-package common
+package gcloud
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 type Video struct {
 }
 
-func (v *Video) SaveVideoFile(ctx context.Context, userid *int, projectid int64, videofd *os.File) (string, error) {
+func (v *Video) SaveVideoFile(ctx context.Context, userid int64, projectid int64, videofd *os.File) (string, error) {
 	var id = uuid.New()
 
 	bucket, err := GetBucket(ctx)
@@ -42,7 +42,7 @@ func (v *Video) SaveVideoFile(ctx context.Context, userid *int, projectid int64,
 }
 
 //DeleteVideoFile is function to delete video file.
-func DeleteVideoFile(ctx context.Context, userid *int, projectid int64, database *sql.DB) error {
+func DeleteVideoFile(ctx context.Context, userid int64, projectid int64, database *sql.DB) error {
 	prefix := fmt.Sprintf("%s%d%s%s%d%s%s", userdir, userid, "/", projectdir, projectid, "/", videodir)
 	var delimeter = "/"
 

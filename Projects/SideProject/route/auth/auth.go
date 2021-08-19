@@ -1,8 +1,9 @@
-package common
+package auth
 
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -21,8 +22,16 @@ import (
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	user "sideproject.com/user"
 )
 
+type Auth struct {
+	DB *sql.DB
+}
+
+type ResEmailInfo struct {
+	Email string `json:"email"`
+}
 type AuthUserInfo struct {
 	ID            string `json:"id"`
 	Email         string `json:"email"`
@@ -55,13 +64,29 @@ var googleOauthConfig = oauth2.Config{
 	Endpoint:     google.Endpoint,
 }
 
-func (p *project) googleLoginHandler(c *gin.Context) {
-	state := generateStateOauthCookie(c)
+func (a *Auth) Routes(route *gin.Engine) {
+
+	gra := route.Group("/auth")
+	{
+		gra.GET("/google/signup", a.googleLoginHandler)
+		gra.GET("/google/callback", a.googleAuthCallback)
+		gra.GET("/facebook/signup", a.facebookLoginHandler)
+		gra.GET("/facebook/callback", a.facebookAuthCallback)
+		gra.GET("/kakao/signup", a.kakaoLoginHandler)
+		gra.GET("/kakao/callback", a.kakaoAuthCallback)
+		gra.GET("/naver/signup", a.naverLoginHndler)
+		gra.GET("/naver/callback", a.naverAuthCallback)
+	}
+
+}
+
+func (a *Auth) googleLoginHandler(c *gin.Context) {
+	state := a.generateStateOauthCookie(c)
 	url := googleOauthConfig.AuthCodeURL(state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func generateStateOauthCookie(c *gin.Context) string {
+func (a *Auth) generateStateOauthCookie(c *gin.Context) string {
 	expiration := time.Now().Add(1 * 24 * time.Hour)
 	b := make([]byte, 16)
 	rand.Read(b)
@@ -75,7 +100,7 @@ func generateStateOauthCookie(c *gin.Context) string {
 
 var store = sessions.NewCookieStore([]byte("a12574e0-a68b-4e99-82ba-2f1d950b8126"))
 
-func (p *project) googleAuthCallback(c *gin.Context) {
+func (a *Auth) googleAuthCallback(c *gin.Context) {
 
 	oauthstate, err := c.Request.Cookie("oauthstate")
 	if err != nil {
@@ -97,7 +122,7 @@ func (p *project) googleAuthCallback(c *gin.Context) {
 		return
 	}
 
-	var userinfo AuthUserInfo
+	var userinfo user.AuthUserInfo
 	err = json.Unmarshal(data, &userinfo)
 	if err != nil {
 		log.Println("[ERR] unmarshal err : ", err)
@@ -118,7 +143,9 @@ func (p *project) googleAuthCallback(c *gin.Context) {
 	}
 
 	userinfo.Social = "google"
-	err = p.db.CreateUserInfo(userinfo)
+
+	u := &user.Usr{DB: a.DB}
+	err = u.CreateUserInfo(userinfo)
 	if err != nil {
 		log.Println("[ERR] session save err :", err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
@@ -132,7 +159,7 @@ func (p *project) googleAuthCallback(c *gin.Context) {
 }
 
 //CheckSessionValidity is function to check whether the ssesion is valid or not.
-func CheckSessionValidity(c *gin.Context) {
+func (a *Auth) CheckSessionValidity(c *gin.Context) {
 	session, err := store.Get(c.Request, "session")
 	if err != nil {
 		log.Println("[ERR] get sesion err : ", err)
@@ -180,14 +207,14 @@ var facebookOauthConfig = oauth2.Config{
 	Endpoint:     facebook.Endpoint,
 }
 
-func (p *project) facebookLoginHandler(c *gin.Context) {
-	state := generateStateOauthCookie(c)
+func (a *Auth) facebookLoginHandler(c *gin.Context) {
+	state := a.generateStateOauthCookie(c)
 	url := facebookOauthConfig.AuthCodeURL(state)
 	fmt.Println("url:", url)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func (p *project) facebookAuthCallback(c *gin.Context) {
+func (a *Auth) facebookAuthCallback(c *gin.Context) {
 
 	oauthstate, err := c.Request.Cookie("oauthstate")
 	if err != nil {
@@ -210,7 +237,7 @@ func (p *project) facebookAuthCallback(c *gin.Context) {
 	}
 	log.Println("data ", string(data))
 
-	var userinfo AuthUserInfo
+	var userinfo user.AuthUserInfo
 	err = json.Unmarshal(data, &userinfo)
 	if err != nil {
 		log.Println("[ERR] unmarshal err : ", err.Error())
@@ -234,7 +261,9 @@ func (p *project) facebookAuthCallback(c *gin.Context) {
 	}
 
 	userinfo.Social = "facebook"
-	err = p.db.CreateUserInfo(userinfo)
+
+	u := &user.Usr{DB: a.DB}
+	err = u.CreateUserInfo(userinfo)
 	if err != nil {
 		log.Println("[ERR] session save err :", err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
@@ -273,13 +302,13 @@ var kakaoOauthConfig = oauth2.Config{
 	Endpoint: kakao.Endpoint,
 }
 
-func (p *project) kakaoLoginHandler(c *gin.Context) {
-	state := generateStateOauthCookie(c)
+func (a *Auth) kakaoLoginHandler(c *gin.Context) {
+	state := a.generateStateOauthCookie(c)
 	url := kakaoOauthConfig.AuthCodeURL(state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func (p *project) kakaoAuthCallback(c *gin.Context) {
+func (a *Auth) kakaoAuthCallback(c *gin.Context) {
 
 	oauthstate, err := c.Request.Cookie("oauthstate")
 	if err != nil {
@@ -309,7 +338,7 @@ func (p *project) kakaoAuthCallback(c *gin.Context) {
 		return
 	}
 
-	var userinfo AuthUserInfo
+	var userinfo user.AuthUserInfo
 
 	userinfo.ID = strconv.Itoa(kakaouserinfo.ID)
 	userinfo.Email = kakaouserinfo.KakaoAccount.Email
@@ -329,7 +358,8 @@ func (p *project) kakaoAuthCallback(c *gin.Context) {
 	}
 
 	userinfo.Social = "kakao"
-	err = p.db.CreateUserInfo(userinfo)
+	u := &user.Usr{DB: a.DB}
+	err = u.CreateUserInfo(userinfo)
 	if err != nil {
 		log.Println("[ERR] session save err :", err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
@@ -374,13 +404,13 @@ var naverOauthConfig = oauth2.Config{
 	},
 }
 
-func (p *project) naverLoginHndler(c *gin.Context) {
-	state := generateStateOauthCookie(c)
+func (a *Auth) naverLoginHndler(c *gin.Context) {
+	state := a.generateStateOauthCookie(c)
 	url := naverOauthConfig.AuthCodeURL(state)
 	c.Redirect(http.StatusOK, url)
 }
 
-func (p *project) naverAuthCallback(c *gin.Context) {
+func (a *Auth) naverAuthCallback(c *gin.Context) {
 
 	oauthstate, err := c.Request.Cookie("oauthstate")
 	if err != nil {
@@ -411,7 +441,7 @@ func (p *project) naverAuthCallback(c *gin.Context) {
 		return
 	}
 
-	var userinfo AuthUserInfo
+	var userinfo user.AuthUserInfo
 
 	userinfo.ID = naveruserinfo.NaverAccount.ID
 	userinfo.Email = naveruserinfo.NaverAccount.Email
@@ -433,7 +463,8 @@ func (p *project) naverAuthCallback(c *gin.Context) {
 	}
 
 	userinfo.Social = "naver"
-	err = p.db.CreateUserInfo(userinfo)
+	u := &user.Usr{DB: a.DB}
+	err = u.CreateUserInfo(userinfo)
 	if err != nil {
 		log.Println("[ERR] create  user info err : ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})

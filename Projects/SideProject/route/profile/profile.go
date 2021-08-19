@@ -1,8 +1,17 @@
-package common
+package profile
 
 import (
+	"database/sql"
 	"log"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	user "sideproject.com/user"
 )
+
+type Profile struct {
+	DB *sql.DB
+}
 
 type ResProfileFrameInfo struct {
 	UserID           int64  `json:"user_id"`
@@ -110,11 +119,239 @@ type ReqPersonalInformation struct {
 	Account Account `json:"account"`
 }
 
-func (m *mariadbHandler) ReadProfileFrameInfo(userid int64) (*ResProfileFrameInfo, error) {
+type Account struct {
+	UserID      int64  `json:"user_id"`
+	Bank        int    `json:"bank"`
+	Account     string `json:"account"`
+	AgreePolicy bool   `json:"agree_policy"`
+}
+
+func (pf *Profile) Routes(route *gin.RouterGroup) {
+
+	gru := route.Group("/user")
+	{
+		gru.GET("/index", pf.getProfile)
+		gru.GET("/frame", pf.getProfileFrameInfo)
+		gru.GET("/project", pf.getProfileProject)
+		gru.GET("/sell", pf.getProfileSell)
+		gru.GET("/buy", pf.GetProfileBuy)
+		gru.GET("/withdraw", pf.getProfileWithdraw)
+		gru.GET("/modification", pf.getModificationUserInfo)
+		gru.PUT("/modification", pf.putModificationUserInfo)
+	}
+
+	grpl := route.Group("/personal")
+	{
+		grpl.GET("/index", pf.getPersonalIndex)
+		grpl.GET("/information", pf.getPersonalInformation)
+		grpl.PUT("/information", pf.putPersonalInformation)
+	}
+	grart := route.Group("/artist")
+	{
+
+		grart.GET("/index", pf.getProfileArtist)
+		//------ {TODO : project and frame split
+		grart.GET("/information", pf.getProfileArtistInfo)
+		//------ TODO : project and frame split }
+	}
+
+}
+
+func (pf *Profile) getProfile(c *gin.Context) {
+	c.HTML(http.StatusOK, "profileuser.html", gin.H{
+		"title": "Profile User Page",
+	})
+}
+func (pf *Profile) getProfileFrameInfo(c *gin.Context) {
+	userinfo := &user.JSUser{}
+
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user idd err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resprofileframeinfo, err := pf.ReadProfileFrameInfo(userinfo.UserID)
+	if err != nil {
+		log.Println("[ERR] failed to read profile frame information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofileframeinfo)
+}
+func (pf *Profile) getProfileProject(c *gin.Context) {
+	userinfo := &user.JSUser{}
+
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user idd err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resprofileprojectinfo, err := pf.ReadProfileProjectInfo(userinfo.UserID)
+	if err != nil {
+		log.Println("[ERR] failed to read profile project information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofileprojectinfo)
+}
+
+func (pf *Profile) getProfileSell(c *gin.Context) {
+	userinfo := &user.JSUser{}
+
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	resprofilesellinfo, err := pf.ReadProfileSellInfo(userinfo.UserID)
+	if err != nil {
+		log.Println("[ERR] failed to read profile sell history information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofilesellinfo)
+}
+
+func (pf *Profile) GetProfileBuy(c *gin.Context) {
+	userinfo := &user.JSUser{}
+
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resprofilebuyinfo, err := pf.ReadProfileBuyInfo(userinfo.UserID)
+	if err != nil {
+		log.Println("[ERR] failed to read profile buy history information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofilebuyinfo)
+}
+
+func (pf *Profile) getProfileWithdraw(c *gin.Context) {
+	userinfo := &user.JSUser{}
+
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	resprofilebuyinfo, err := pf.ReadProfileWithdrawInfo(userinfo.UserID)
+	if err != nil {
+		log.Println("[ERR] failed to read profile withdraw history information err :", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resprofilebuyinfo)
+}
+
+//GetModificationUserInfoHandler is function to get user profile infomation.
+func (pf *Profile) getModificationUserInfo(c *gin.Context) {
+	userinfo := &user.JSUser{}
+
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	resmodificationuserinfo, err := pf.ReadModificationUserInfo(userinfo.UserID)
+	if err != nil {
+		log.Println("[ERR] failed to read modification user info err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, resmodificationuserinfo)
+}
+
+//PutModificationUserInfoHandler is fuction to edit user profile information.
+func (pf *Profile) putModificationUserInfo(c *gin.Context) {
+	var reqmodinfo = &ReqModificationUserInfo{}
+	err := c.ShouldBindJSON(reqmodinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	err = pf.UpdateModificationUserInfo(reqmodinfo)
+	if err != nil {
+		log.Println("[ERR] update user info ")
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.JSON(http.StatusOK, nil)
+
+}
+
+func (pf *Profile) getPersonalIndex(c *gin.Context) {
+	c.HTML(http.StatusOK, "personalinformation.html", gin.H{
+		"title": "Personal Information Page",
+	})
+}
+func (pf *Profile) getPersonalInformation(c *gin.Context) {
+	var userinfo = &user.JSUser{}
+	err := c.ShouldBindJSON(userinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	respersonalinfomation, err := pf.ReadPersonalInformation(userinfo.UserID)
+	if err != nil {
+		log.Println("[ERR] failed to read personal information err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, respersonalinfomation)
+}
+
+func (pf *Profile) putPersonalInformation(c *gin.Context) {
+	var reqpersonalinformation = &ReqPersonalInformation{}
+	err := c.ShouldBindJSON(reqpersonalinformation)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	err = pf.UpdatePersonalInformation(reqpersonalinformation)
+	if err != nil {
+		log.Println("[ERR] failed to update personal information err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
+}
+
+func (pf *Profile) getProfileArtist(c *gin.Context) {
+	c.HTML(http.StatusOK, "profileartist.html", gin.H{
+		"title": "profile artist  Page",
+	})
+}
+
+func (pf *Profile) ReadProfileFrameInfo(userid int64) (*ResProfileFrameInfo, error) {
 
 	var resprofileframeinfo = &ResProfileFrameInfo{}
 
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := pf.DB.Prepare(`SELECT 
 	u.id, 
 	u.nickname,
 	u.introduction,
@@ -151,11 +388,30 @@ func (m *mariadbHandler) ReadProfileFrameInfo(userid int64) (*ResProfileFrameInf
 	return resprofileframeinfo, nil
 }
 
-func (m *mariadbHandler) ReadProfileProjectInfo(userid int64) (*ResProfileProjectInfo, error) {
+func (pf *Profile) getProfileArtistInfo(c *gin.Context) {
+	var artistprofileinfo = &ArtistProfile{}
+	err := c.ShouldBindJSON(artistprofileinfo)
+	if err != nil {
+		log.Println("[ERR] failed to extract user id err : ", err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	resartistinfo, err := pf.ReadProfileArtistInfo(artistprofileinfo.ArtistID)
+	if err != nil {
+		log.Println("[ERR] failed to read artist information err : ", err)
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resartistinfo)
+}
+
+func (pf *Profile) ReadProfileProjectInfo(userid int64) (*ResProfileProjectInfo, error) {
 	var resprofileprojectinfo = &ResProfileProjectInfo{}
 	var project Project
 
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := pf.DB.Prepare(`SELECT 
 	p.id, 
 	p.title,
 	p.description,
@@ -202,11 +458,11 @@ func (m *mariadbHandler) ReadProfileProjectInfo(userid int64) (*ResProfileProjec
 
 }
 
-func (m *mariadbHandler) ReadProfileSellInfo(userid int64) (*ResProfileSellInfo, error) {
+func (pf *Profile) ReadProfileSellInfo(userid int64) (*ResProfileSellInfo, error) {
 	var resprofilesellinfo = &ResProfileSellInfo{}
 	var sell Sell
 
-	stmt, err := m.db.Prepare(`  SELECT 
+	stmt, err := pf.DB.Prepare(`  SELECT 
 							p.id, 
 							p.title,
 							sh.created_at,
@@ -246,11 +502,11 @@ func (m *mariadbHandler) ReadProfileSellInfo(userid int64) (*ResProfileSellInfo,
 
 }
 
-func (m *mariadbHandler) ReadProfileBuyInfo(userid int64) (*ResProfileBuyInfo, error) {
+func (pf *Profile) ReadProfileBuyInfo(userid int64) (*ResProfileBuyInfo, error) {
 	var resprofilebuyinfo = &ResProfileBuyInfo{}
 	var buy Buy
 
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := pf.DB.Prepare(`SELECT 
 						p.id, 
 						p.title,
 						bh.created_at,
@@ -289,11 +545,11 @@ func (m *mariadbHandler) ReadProfileBuyInfo(userid int64) (*ResProfileBuyInfo, e
 
 }
 
-func (m *mariadbHandler) ReadProfileWithdrawInfo(userid int64) (*ResProfileWithdrawInfo, error) {
+func (pf *Profile) ReadProfileWithdrawInfo(userid int64) (*ResProfileWithdrawInfo, error) {
 	var resprofilewithdrawinfo = &ResProfileWithdrawInfo{}
 	var withdraw Withdraw
 
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := pf.DB.Prepare(`SELECT 
 				  u.id, 
 				  wh.requested_at,
 				  wh.completed_at,
@@ -329,8 +585,8 @@ func (m *mariadbHandler) ReadProfileWithdrawInfo(userid int64) (*ResProfileWithd
 
 }
 
-func (m *mariadbHandler) UpdateModificationUserInfo(reqmodinfo *ReqModificationUserInfo) error {
-	tx, err := m.db.Begin()
+func (pf *Profile) UpdateModificationUserInfo(reqmodinfo *ReqModificationUserInfo) error {
+	tx, err := pf.DB.Begin()
 	if err != nil {
 		log.Println("[ERR] begin err : ", err)
 		return err
@@ -371,10 +627,10 @@ func (m *mariadbHandler) UpdateModificationUserInfo(reqmodinfo *ReqModificationU
 	return nil
 }
 
-func (m *mariadbHandler) ReadModificationUserInfo(userid int64) (*ResModificationUserInfo, error) {
+func (pf *Profile) ReadModificationUserInfo(userid int64) (*ResModificationUserInfo, error) {
 	var resmodificationuserinfo = &ResModificationUserInfo{}
 
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := pf.DB.Prepare(`SELECT 
 	name, 
 	nickname,
 	email,
@@ -410,11 +666,11 @@ func (m *mariadbHandler) ReadModificationUserInfo(userid int64) (*ResModificatio
 	return resmodificationuserinfo, err
 }
 
-func (m *mariadbHandler) ReadProfileArtistInfo(artistid int64) (*ResArtistProfileInfo, error) {
+func (pf *Profile) ReadProfileArtistInfo(artistid int64) (*ResArtistProfileInfo, error) {
 	var resartistinfo = &ResArtistProfileInfo{}
 	var project Project
 
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := pf.DB.Prepare(`SELECT 
 	u.id,
 	u.nickname,
 	u.introduction,
@@ -468,10 +724,10 @@ func (m *mariadbHandler) ReadProfileArtistInfo(artistid int64) (*ResArtistProfil
 	return resartistinfo, nil
 }
 
-func (m *mariadbHandler) ReadPersonalInformation(userid int64) (*ResPersonalInformation, error) {
+func (pf *Profile) ReadPersonalInformation(userid int64) (*ResPersonalInformation, error) {
 	var respersonalinformation = &ResPersonalInformation{}
 
-	stmt, err := m.db.Prepare(`SELECT 
+	stmt, err := pf.DB.Prepare(`SELECT 
 	bank, 
 	account,
 	agree_policy
@@ -505,9 +761,9 @@ func (m *mariadbHandler) ReadPersonalInformation(userid int64) (*ResPersonalInfo
 
 }
 
-func (m *mariadbHandler) UpdatePersonalInformation(reqpersonalinformation *ReqPersonalInformation) error {
+func (pf *Profile) UpdatePersonalInformation(reqpersonalinformation *ReqPersonalInformation) error {
 
-	tx, err := m.db.Begin()
+	tx, err := pf.DB.Begin()
 	if err != nil {
 		log.Println("[ERR] begin err : ", err)
 		return err

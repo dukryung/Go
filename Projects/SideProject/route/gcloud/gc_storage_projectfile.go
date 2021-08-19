@@ -1,4 +1,4 @@
-package common
+package gcloud
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 type ProjectFile struct {
 }
 
-func (pf *ProjectFile) SaveBetaFile(ctx context.Context, userid *int, projectid int64, betafd *os.File) (string, error) {
+func (pf *ProjectFile) SaveBetaFile(ctx context.Context, userid int64, projectid int64, betafd *os.File) (string, error) {
 	var id = uuid.New()
 
 	bucket, err := GetBucket(ctx)
@@ -42,7 +42,7 @@ func (pf *ProjectFile) SaveBetaFile(ctx context.Context, userid *int, projectid 
 }
 
 //DeleteBetaFile is function to delete wrong betafile.
-func DeleteBetaFile(ctx context.Context, userid *int, projectid int64, database *sql.DB) error {
+func DeleteBetaFile(ctx context.Context, userid int64, projectid int64, database *sql.DB) error {
 	prefix := fmt.Sprintf("%s%d%s%s%d%s%s", userdir, userid, "/", projectdir, projectid, "/", betadir)
 	var delimeter = "/"
 
@@ -113,7 +113,7 @@ func ReadBetaLink(projectid int64, database *sql.DB) (string, error) {
 	return betalink, nil
 }
 
-func (pf *ProjectFile) SaveOriginFile(ctx context.Context, userid *int, projectid int64, originfd *os.File) (string, error) {
+func (pf *ProjectFile) SaveOriginFile(ctx context.Context, userid int64, projectid int64, originfd *os.File) (string, error) {
 	var id = uuid.New()
 	bucket, err := GetBucket(ctx)
 	if err != nil {
@@ -138,7 +138,7 @@ func (pf *ProjectFile) SaveOriginFile(ctx context.Context, userid *int, projecti
 }
 
 //DeleteOriginFile is function to delete original file.
-func DeleteOriginFile(ctx context.Context, userid *int, projectid int64, database *sql.DB) error {
+func DeleteOriginFile(ctx context.Context, userid int64, projectid int64, database *sql.DB) error {
 	prefix := fmt.Sprintf("%s%d%s%s%d%s%s", userdir, userid, "/", projectdir, projectid, "/", origindir)
 	var delimeter = "/"
 
