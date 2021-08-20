@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"sideproject/route/gcloud"
 	"strconv"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	gcloud "sideproject.com/gcloud"
 )
 
 type Pjt struct {
@@ -67,7 +67,7 @@ type ProjectDetailReplyInfo struct {
 
 type ReqUploadProjectInfo struct {
 	ID          int64  `json:"id"`
-	ProjectID   int64  `json:"projecid`
+	ProjectID   int64  `json:"projectid"`
 	Title       string `json:"title"`
 	Category    string `json:"category"`
 	Desc        string `json:"desc"`
@@ -114,10 +114,18 @@ func (p *Pjt) Routes(route *gin.RouterGroup) {
 	route.GET("/informaiton/detail/image", p.getProjectDetailProjectImages)
 	route.GET("/informaiton/detail/comment", p.getProjectDetailComment)
 	route.POST("/information/upload", p.postProjectUpload)
-	route.PUT("/information/upload")
+	route.PUT("/information/upload", p.putProjectUpload)
 
 }
 func (p *Pjt) putProjectUpload(c *gin.Context) {
+	err := p.UpdateProjectInfo(c)
+	if err != nil {
+		log.Println("[ERR] failed to update project err : ", err)
+		c.JSON(http.StatusOK, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
 
 }
 
@@ -851,14 +859,14 @@ func (p *Pjt) UpdateProjectInfo(c *gin.Context) error {
 	defer tx.Rollback()
 
 	{
-		stmt, err := tx.Prepare(`UPDATE project SET category_id = ?, title = ?, description = ?, price = ?,updated_at) VALUES(?,?,?,?,NOW() WHERE id = ?)`)
+		stmt, err := tx.Prepare(`UPDATE project SET category_id = ?, title = ?, description = ?, price = ?,updated_at) VALUES(?,?,?,?,NOW() WHERE user_id = ? AND id = ?)`)
 		if err != nil {
 			log.Println("[ERR] prepare statement err : ", err)
 			return err
 		}
 		defer stmt.Close()
 
-		result, err := stmt.Exec(requploadprojectinfo.Category, requploadprojectinfo.Title, requploadprojectinfo.Desc, requploadprojectinfo.Price, requploadprojectinfo.ID)
+		result, err := stmt.Exec(requploadprojectinfo.Category, requploadprojectinfo.Title, requploadprojectinfo.Desc, requploadprojectinfo.Price, requploadprojectinfo.ID, requploadprojectinfo.ProjectID)
 		if err != nil {
 			log.Println("[ERR] stmt exec err : ", err)
 			return err

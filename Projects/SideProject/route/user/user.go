@@ -9,11 +9,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"sideproject/route/common"
+	"sideproject/route/gcloud"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/appengine"
-	common "sideproject.com/common"
-	"sideproject.com/gcloud"
 )
 
 type Usr struct {
@@ -197,6 +197,7 @@ func (u *Usr) CreateUserInfo(authuserinfo AuthUserInfo) error {
 
 //SaveImageFiles is function to get user's images
 func (u *Usr) SaveJoinUserInfo(c *gin.Context) (string, error) {
+
 	var args common.ArgsUpdateJoinUserInfo
 	multipartreader, err := c.Request.MultipartReader()
 	if err != nil {

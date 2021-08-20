@@ -7,12 +7,12 @@ import (
 	"io"
 	"log"
 	"os"
+	"sideproject/route/common"
 
 	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
-	common "sideproject.com/common"
 )
 
 //Image is struct to make  image function concerned  objectively.

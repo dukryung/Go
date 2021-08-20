@@ -1,18 +1,20 @@
 package route
 
 import (
+	"io/ioutil"
+	"log"
 	"net/http"
+	"sideproject/route/artist"
+	"sideproject/route/auth"
+	"sideproject/route/database"
+	"sideproject/route/profile"
+	"sideproject/route/project"
+	"sideproject/route/user"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/unrolled/render"
-
-	artist "sideproject.com/artist"
-	auth "sideproject.com/auth"
-	database "sideproject.com/database"
-	profile "sideproject.com/profile"
-	project "sideproject.com/project"
-	user "sideproject.com/user"
 )
 
 var rd *render.Render = render.New()
@@ -37,7 +39,7 @@ func getIndex(c *gin.Context) {
 }
 
 //MakeHandler is function to gather router.
-func MakeHandler(route *gin.Engine, dbname string) *gin.Engine {
+func MakeHandler(dbname string) *gin.Engine {
 
 	d := database.MakeDBHandler(dbname)
 
@@ -47,7 +49,10 @@ func MakeHandler(route *gin.Engine, dbname string) *gin.Engine {
 	a := &artist.Artist{DB: d}
 	au := &auth.Auth{DB: d}
 
+	route := gin.Default()
 	//Set up route groups and check session middleware
+	route.GET("/", getIndex)
+
 	grusr := route.Group("/user")
 	grusr.Use(au.CheckSessionValidity)
 
@@ -60,13 +65,48 @@ func MakeHandler(route *gin.Engine, dbname string) *gin.Engine {
 	gra := route.Group("/artist")
 	gra.Use(au.CheckSessionValidity)
 
-	route.GET("/", getIndex)
+	route.GET("/project/detail/iamport", Parentiamport)
 
 	u.Routes(grusr)
 	pf.Routes(grpf)
 	p.Routes(grp)
-	a.Routes(route)
+	a.Routes(gra)
 
 	return route
 
+}
+
+func Parentiamport(c *gin.Context) {
+
+	body, err := Iamport()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, body)
+
+}
+
+func Iamport() ([]byte, error) {
+
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "https://admin.iamport.kr/users/getToken", nil)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+		return nil, err
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+		return nil, err
+	}
+
+	body, _ := ioutil.ReadAll(res.Body)
+
+	return body, nil
 }

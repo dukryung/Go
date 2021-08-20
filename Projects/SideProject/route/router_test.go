@@ -1,8 +1,6 @@
 package route
 
 import (
-	"bytes"
-	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -514,9 +512,9 @@ func TestPutPersonalInformationHandler(t *testing.T) {
 
 	assert.Equal(http.StatusOK, res.StatusCode)
 }
-
 */
 
+/*
 func TestGetProjectDetailProjectInformationHandler(t *testing.T) {
 	var reqprojectdetailinfo = &ReqProjectDetailInfo{}
 	assert := assert.New(t)
@@ -553,4 +551,35 @@ func TestGetProjectDetailProjectInformationHandler(t *testing.T) {
 
 	log.Println("[LOG] personalinfo history : ", string(resprojectdetailinfo))
 
+}
+
+*/
+
+func TestParentiamport(t *testing.T) {
+
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/project/detail/iamport", nil)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+
+	token, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("[ERR] read all err : ", err)
+	}
+
+	log.Println("[LOG] token history : ", string(token))
 }

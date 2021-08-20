@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sideproject/route/user"
 	"strconv"
 	"time"
 
@@ -22,7 +23,6 @@ import (
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	user "sideproject.com/user"
 )
 
 type Auth struct {

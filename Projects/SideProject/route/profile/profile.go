@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"sideproject/route/user"
 
 	"github.com/gin-gonic/gin"
-	user "sideproject.com/user"
 )
 
 type Profile struct {

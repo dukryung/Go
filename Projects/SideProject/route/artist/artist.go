@@ -27,7 +27,7 @@ type ResJSArtOfTheMonth struct {
 	Art []JSArt `json:"artist_list"`
 }
 
-func (a *Artist) Routes(route *gin.Engine) {
+func (a *Artist) Routes(route *gin.RouterGroup) {
 	route.GET("/", a.getArtistInfo)
 }
 
