@@ -7,6 +7,7 @@ import (
 	"sideproject/route/artist"
 	"sideproject/route/auth"
 	"sideproject/route/database"
+	"sideproject/route/iamport"
 	"sideproject/route/profile"
 	"sideproject/route/project"
 	"sideproject/route/user"
@@ -48,6 +49,7 @@ func MakeHandler(dbname string) *gin.Engine {
 	p := &project.Pjt{DB: d}
 	a := &artist.Artist{DB: d}
 	au := &auth.Auth{DB: d}
+	i := &iamport.Iamport{DB: d}
 
 	route := gin.Default()
 	//Set up route groups and check session middleware
@@ -65,12 +67,14 @@ func MakeHandler(dbname string) *gin.Engine {
 	gra := route.Group("/artist")
 	gra.Use(au.CheckSessionValidity)
 
-	route.GET("/project/detail/iamport", Parentiamport)
+	gi := route.Group("/iamport")
+	gi.Use(au.CheckSessionValidity)
 
 	u.Routes(grusr)
 	pf.Routes(grpf)
 	p.Routes(grp)
 	a.Routes(gra)
+	i.Routes(gi)
 
 	return route
 

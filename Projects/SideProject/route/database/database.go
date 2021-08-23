@@ -37,6 +37,7 @@ func NewMariaDBHandler(databasename string) *sql.DB {
 		id 		     BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
 		session_id   TEXT,
 		name	     VARCHAR(50),
+		phonenum     VARCHAR(50),
 		nickname     VARCHAR(50),
 		email 	     VARCHAR(320),
 		agree_email_marketing BOOLEAN,
@@ -317,6 +318,26 @@ func NewMariaDBHandler(databasename string) *sql.DB {
 		id BIGINT  UNSIGNED PRIMARY KEY AUTO_INCREMENT,
 		user_id BIGINT UNSIGNED,
 		project_id BIGINT UNSIGNED,
+		created_at TIMESTAMP,
+		UNIQUE INDEX idx_id (id),
+		INDEX idx_user_id (user_id),
+	 	INDEX idx_created_at (created_at)
+		);
+		`)
+
+	if err != nil {
+		log.Println("[LOG] database prepare err:", err)
+	}
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Println("[LOG] stmt exec error : ", err)
+	}
+
+	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS payment (
+		id BIGINT  UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+		impuid BIGINT VARCHAR(20) DEFAULT 'imp53094657',
+		pg BIGINT VARCHAR(20) DEFAULT 'html5_inicis',
+		pay_method VARCHAR(10) DEFAULT 'card',
 		created_at TIMESTAMP,
 		UNIQUE INDEX idx_id (id),
 		INDEX idx_user_id (user_id),
