@@ -335,12 +335,11 @@ func NewMariaDBHandler(databasename string) *sql.DB {
 
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS payment (
 		id BIGINT  UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-		impuid BIGINT VARCHAR(20) DEFAULT 'imp53094657',
-		pg BIGINT VARCHAR(20) DEFAULT 'html5_inicis',
+		impuid VARCHAR(20) DEFAULT 'imp53094657',
+		pg VARCHAR(20) DEFAULT 'html5_inicis',
 		pay_method VARCHAR(10) DEFAULT 'card',
 		created_at TIMESTAMP,
 		UNIQUE INDEX idx_id (id),
-		INDEX idx_user_id (user_id),
 	 	INDEX idx_created_at (created_at)
 		);
 		`)
