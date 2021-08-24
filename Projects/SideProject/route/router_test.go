@@ -1,10 +1,12 @@
 package route
 
 import (
-	"io/ioutil"
+	"bytes"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"sideproject/route/iamport"
 	"testing"
 	"time"
 
@@ -554,7 +556,7 @@ func TestGetProjectDetailProjectInformationHandler(t *testing.T) {
 }
 
 */
-
+/*
 func TestParentiamport(t *testing.T) {
 
 	assert := assert.New(t)
@@ -564,7 +566,7 @@ func TestParentiamport(t *testing.T) {
 		Timeout: time.Second * 10,
 	}
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/project/detail/iamport", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/iamport", nil)
 	if err != nil {
 		log.Println("[ERR] new request err : ", err)
 	}
@@ -582,4 +584,36 @@ func TestParentiamport(t *testing.T) {
 	}
 
 	log.Println("[LOG] token history : ", string(token))
+}
+
+*/
+func TestCheckPAYMT(t *testing.T) {
+	reqsrc := &iamport.REQRSC{Iid: "imp_367251774536",
+		Mid: "xxx"}
+	assert := assert.New(t)
+
+	ts := httptest.NewServer(MakeHandler("sideproject"))
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	data, err := json.Marshal(reqsrc)
+	if err != nil {
+		log.Println("[ERR] json marshal err: ", err)
+	}
+
+	buff := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/iamport/payment/complete", buff)
+	if err != nil {
+		log.Println("[ERR] new request err : ", err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("[ERR] client do err : ", err)
+	}
+
+	assert.Equal(http.StatusOK, res.StatusCode)
+
 }
