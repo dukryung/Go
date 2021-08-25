@@ -66,6 +66,7 @@ type PAYMT struct {
 type REQRSC struct {
 	Uid int64  `json:"user_id"`
 	Pid int64  `json:"project_id"`
+	Aid int64  `json:"artist_id"`
 	Iid string `json:"imp_uid"`
 	Mid string `json:"merchant_uid"`
 }
@@ -158,23 +159,155 @@ func (iam *Iamport) CheckPAYMT(c *gin.Context) {
 		return
 	}
 
-	//{----TODO : save payment information to DB.
-	//-----}
+	err = iam.SavePAYMTTODB(pay, reqrsc)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
 
 	c.JSON(http.StatusOK, nil)
 }
-func (iam *Iamport) SavePAYMTTODB(pay PAYMT) {
-	//{----TODO : save  buy history information.
-	//-----}
+func (iam *Iamport) SavePAYMTTODB(pay PAYMT, reqsrc *REQRSC) error {
 
-	//{----TODO : save  sell history information.
-	//-----}
+	tx, err := iam.DB.Begin()
+	if err != nil {
+		return errors.New("[ERR] fail transaction begin")
+	}
+	defer tx.Rollback()
 
-	//{----TODO : insert buy history at user's buy history (maybe should make table)
-	//-----}
+	err = insertBuyHistory(tx, pay, reqsrc)
+	if err != nil {
+		return err
+	}
 
-	//{----TODO : update sell count at user table
-	//-----}
+	err = insertSellHistory(tx, pay, reqsrc)
+	if err != nil {
+		return err
+	}
+
+	err = insertSaleList(tx, reqsrc)
+	if err != nil {
+		return err
+	}
+
+	err = updatePAYMTConcerned(tx, pay, reqsrc)
+	if err != nil {
+		return err
+	}
+
+	tx.Commit()
+
+	return nil
+}
+
+//updatePAYMTConcerned updates project sell_count and cash
+func updatePAYMTConcerned(tx *sql.Tx, pay PAYMT, reqsrc *REQRSC) error {
+
+	stmt, err := tx.Prepare(`UPDATE user AS u JOIN project AS p ON u.id = p.user_id SET cash= cash + ?, sell_count = sell_count + 1 WHERE p.id = ?`)
+	if err != nil {
+		return errors.New("[ERR] failed to prepare statement in updatePAYMTConcern")
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(pay.Amount, reqsrc.Pid)
+	if err != nil {
+		return errors.New("[ERR] failed to execute insert sale information in InsertSaleList")
+	}
+
+	return nil
+}
+
+//insertSaleList inserts projects sales.
+func insertSaleList(tx *sql.Tx, reqsrc *REQRSC) error {
+	stmt, err := tx.Prepare(`INSERT INTO salelist (user_id, project_id) 
+	VALUES(?,?)`)
+	if err != nil {
+		return errors.New("[ERR] failed  to prepare statement in InsertSaleList")
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(reqsrc.Uid, reqsrc.Pid)
+	if err != nil {
+		return errors.New("[ERR] failed to execute insert sale information in InsertSaleList")
+	}
+
+	return nil
+}
+
+//SBRSC is abbreviation of Seller and buyer resource
+//SelectSBRSC reads seller and buyer information
+func selectSBRSC(tx *sql.Tx, userid int64) (string, error) {
+	stmt, err := tx.Prepare(`SELECT nickname FROM user WHERE id = ? `)
+	if err != nil {
+		return "", errors.New("[ERR] failed to prepare statement in SelectBuyerRSC")
+	}
+
+	defer stmt.Close()
+
+	rows, err := stmt.Query(userid)
+	if err != nil {
+		return "", errors.New("[ERR] failed to query in SelectBuyerRSC")
+	}
+	defer rows.Close()
+
+	var nickname string
+	for rows.Next() {
+		err = rows.Scan(&nickname)
+		if err != nil {
+			return "", errors.New("[ERR] failed to scan in SelectBuyerRSC")
+		}
+	}
+
+	return nickname, nil
+}
+
+//InsertBuyHistory saves buy history to DB.
+func insertBuyHistory(tx *sql.Tx, pay PAYMT, reqsrc *REQRSC) error {
+
+	snickname, err := selectSBRSC(tx, reqsrc.Aid)
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare(`INSERT INTO buy_history 
+	(user_id, project_id, seller_id, seller_nickname, price,impuid, merchant_id)
+	VALUES(?,?,?,?,?,?,?)`)
+	if err != nil {
+		return errors.New("[ERR] failed to prepare statement in InsertBuyHistory")
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(reqsrc.Uid, reqsrc.Pid, reqsrc.Aid, snickname, pay.Amount, pay.ImpUID, pay.MerchantUID)
+	if err != nil {
+		return errors.New("[ERR] failed to execute statement")
+	}
+
+	return nil
+}
+
+//InsertSellHistory saves buy history to DB.
+func insertSellHistory(tx *sql.Tx, pay PAYMT, reqsrc *REQRSC) error {
+
+	bnickname, err := selectSBRSC(tx, reqsrc.Uid)
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare(`INSERT INTO buy_history 
+	(user_id, project_id, seller_id, seller_nickname, price,impuid, merchant_id)
+	VALUES(?,?,?,?,?,?,?)`)
+	if err != nil {
+		return errors.New("[ERR] failed to prepare statement in InsertBuyHistory")
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(reqsrc.Aid, reqsrc.Pid, reqsrc.Uid, bnickname, pay.Amount, pay.ImpUID, pay.MerchantUID)
+	if err != nil {
+		return errors.New("[ERR] failed to execute statement")
+	}
+
+	return nil
 }
 
 func (iam *Iamport) ComparePrice(amount int64, price int64) error {
