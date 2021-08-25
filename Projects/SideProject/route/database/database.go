@@ -26,6 +26,7 @@ func NewMariaDBHandler(databasename string) *sql.DB {
 	_, err = database.Exec("CREATE DATABASE IF NOT EXISTS " + databasename + ";")
 	if err != nil {
 		log.Println("[LOG] database exec err : ", err)
+
 	}
 
 	_, err = database.Exec("USE " + databasename)
@@ -95,6 +96,16 @@ func NewMariaDBHandler(databasename string) *sql.DB {
 		log.Println("[LOG] stmt exec error : ", err)
 	}
 
+	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS salelist (
+		id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+		user_id BIGINT UNSIGNED,
+		project_id BIGINT UNSIGNED
+		created_at 		   TIMESTAMP,
+		UNIQUE INDEX idx_id (id),
+		INDEX idx_created_at (created_at)
+  		);
+		`)
+
 	stmt, err = database.Prepare(`CREATE TABLE IF NOT EXISTS image (
   		id BIGINT 		UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   		project_id 		BIGINT UNSIGNED,
@@ -139,7 +150,8 @@ func NewMariaDBHandler(databasename string) *sql.DB {
   		seller_id 		BIGINT UNSIGNED,
 		seller_nickname VARCHAR(50),
 		price			INT,
-  		import_id int,
+		impuid	 		TEXT,
+		merchant_id 	TEXT,
   		created_at TIMESTAMP,
   		UNIQUE INDEX idx_id (id)
   		);
@@ -160,7 +172,8 @@ func NewMariaDBHandler(databasename string) *sql.DB {
   		buyer_id 		BIGINT UNSIGNED,
 		buyer_nickname  VARCHAR(50),
 		price			INT,
-  		import_id 		INT,
+		impuid	 		TEXT,
+		merchant_id 	TEXT,
   		created_at 		TIMESTAMP,
   		UNIQUE INDEX idx_id (id),
   		INDEX idx_user_id (user_id)
