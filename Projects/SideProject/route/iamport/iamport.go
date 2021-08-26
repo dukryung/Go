@@ -74,6 +74,13 @@ type REQRSC struct {
 func (iam *Iamport) Routes(route *gin.RouterGroup) {
 	route.GET("/payment/information", iam.GetPAYMT)
 	route.POST("/payment/complete", iam.CheckPAYMT)
+	//---{TODO : cancel logic
+	route.POST("/payment/cancel")
+	//---}
+}
+
+func (iam *Iamport) CancelPAYMT(c *gin.Context) {
+
 }
 
 //PAYT is abbreviation of payment.
@@ -167,6 +174,7 @@ func (iam *Iamport) CheckPAYMT(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, nil)
+
 }
 func (iam *Iamport) SavePAYMTTODB(pay PAYMT, reqsrc *REQRSC) error {
 
