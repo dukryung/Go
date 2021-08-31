@@ -52,10 +52,11 @@ func main() {
 
 	// 2. Index documents concurrently
 	//
-	for i, title := range []string{"Test One", "Test Two"} {
+	j := 3
+	for _, title := range []string{"computer One", "computer Two"} {
 		wg.Add(1)
-
-		go func(i int, title string) {
+		j++
+		go func(j int, title string) {
 			defer wg.Done()
 
 			// Build the request body.
@@ -66,8 +67,8 @@ func main() {
 
 			// Set up the request object.
 			req := esapi.IndexRequest{
-				Index:      "test",
-				DocumentID: strconv.Itoa(i + 1),
+				Index:      "computer",
+				DocumentID: strconv.Itoa(j + 1),
 				Body:       strings.NewReader(b.String()),
 				Refresh:    "true",
 			}
@@ -80,7 +81,7 @@ func main() {
 			defer res.Body.Close()
 
 			if res.IsError() {
-				log.Printf("[%s] Error indexing document ID=%d", res.Status(), i+1)
+				log.Printf("[%s] Error indexing document ID=%d", res.Status(), j+1)
 			} else {
 				// Deserialize the response into a map.
 				var r map[string]interface{}
@@ -91,7 +92,7 @@ func main() {
 					log.Printf("[%s] %s; version=%d", res.Status(), r["result"], int(r["_version"].(float64)))
 				}
 			}
-		}(i, title)
+		}(j, title)
 	}
 	wg.Wait()
 
@@ -104,7 +105,7 @@ func main() {
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
 			"match": map[string]interface{}{
-				"title": "test",
+				"title": "computer",
 			},
 		},
 	}
@@ -115,7 +116,7 @@ func main() {
 	// Perform the search request.
 	res, err = es.Search(
 		es.Search.WithContext(context.Background()),
-		es.Search.WithIndex("test"),
+		es.Search.WithIndex("computer"),
 		es.Search.WithBody(&buf),
 		es.Search.WithTrackTotalHits(true),
 		es.Search.WithPretty(),
