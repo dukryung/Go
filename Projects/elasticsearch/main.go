@@ -41,6 +41,7 @@ func main() {
 	if res.IsError() {
 		log.Fatalf("Error: %s", res.String())
 	}
+
 	// Deserialize the response into a map.
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
 		log.Fatalf("Error parsing the response body: %s", err)
@@ -106,6 +107,7 @@ func main() {
 		"query": map[string]interface{}{
 			"match": map[string]interface{}{
 				"title": "computer",
+				"age": 
 			},
 		},
 	}
