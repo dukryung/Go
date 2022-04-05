@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+
+package server.media;
+
+option go_package = "server/media";
+
+service Media {
+  rpc RequestMedia(MediaRequest) returns (MediaResponse) {
+    option (google.api.http) = {
+      post: "/request/media"
+      body:"*"
+    };
+  }
+}
+
+message MediaRequest {
+  string Test = 1;
+}
+
+message MediaResponse {
+  string code = 1;
+}
