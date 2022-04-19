@@ -16,5 +16,6 @@ for dir in $proto_dirs; do
 done
 
 
+cp -r test/* ./
 #cp -r github.com/hessegg/klaatoo-faucet/* ./
 #rm -rf github.com

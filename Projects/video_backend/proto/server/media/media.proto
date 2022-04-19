@@ -16,7 +16,7 @@ service Media {
 }
 
 message MediaRequest {
-  string Test = 1;
+  string code = 1;
 }
 
 message MediaResponse {

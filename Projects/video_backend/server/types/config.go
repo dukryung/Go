@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 )
 
 const DefaultAppConfigPath = "./default_app_config_path"
@@ -33,6 +34,8 @@ func (config *AppConfig) LoadAppConfig(configPath string) error {
 		return err
 	}
 
+
+	log.Println("!!!!!!!!!!!!!!!!!!!!:", string(data))
 	return nil
 }
 

@@ -15,6 +15,6 @@ for dir in $proto_dirs; do
   $(find "${dir}" -maxdepth 1 -name '*.proto')
 done
 
-
+#cp -r test/* ./
 #cp -r github.com/hessegg/klaatoo-faucet/* ./
 #rm -rf github.com
